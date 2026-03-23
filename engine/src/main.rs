@@ -1,9 +1,10 @@
 mod config;
+mod services;
 
-fn main() {
+#[tokio::main]
+async fn main(){
     let cfg = config::load_env::load_env();
-    println!("Database URL: {}", cfg.database_url);
-    println!("VPS Port: {}", cfg.vps_port);
-    println!("VPS IP: {}", cfg.vps_ip);
-    println!("VPS User: {}", cfg.vps_user);
+    services::db::init_db(&cfg.database_url)
+        .await.expect("Failed to initialize database connection pool");
+    println!("Database connection pool initialized successfully");
 }
