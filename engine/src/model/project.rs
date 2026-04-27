@@ -1,11 +1,6 @@
 use chrono::{DateTime, Utc};
+use super::error::ProjectError;
 
-
-pub enum ProjectError {
-    MissingRepositoryName,
-    MissingNamespace,
-    InvalidRepositoryUrl,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProjectId(String);

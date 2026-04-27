@@ -1,6 +1,5 @@
 
 
-pub fn initializer(source: &str, namespace: &str, project_name: &str) -> String {
-    
+pub fn initializer(run: &AnalysisRun) -> Result<T, E> {
 
 }
