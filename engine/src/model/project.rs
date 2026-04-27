@@ -11,8 +11,8 @@ pub enum ProjectError {
 pub struct ProjectId(String);
 
 impl ProjectId {
-    pub fn new(namespace: String, project_name: String, commit: String) -> Self {
-        Self(format!("{}_{}_{}", namespace, project_name, commit))
+    pub fn new(namespace: String, project_name: String) -> Self {
+        Self(format!("{}_{}", namespace, project_name))
     }
 
     pub fn value(&self) -> &str {
@@ -53,10 +53,10 @@ impl Project {
         Ok((namespace, name))
     }
 
-    pub fn new(commit: String, repo_url: String, branch: String) -> Result<Self, ProjectError> {
+    pub fn new(repo_url: String, branch: String) -> Result<Self, ProjectError> {
         let (namespace, name) = Self::split_repo_url(&repo_url)?;
 
-        let id = ProjectId::new(namespace, name.clone(), commit);
+        let id = ProjectId::new(namespace, name.clone());
 
         Ok(Self {
             id,
