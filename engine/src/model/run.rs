@@ -1,12 +1,12 @@
 
 
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RunId(String);
 
 impl RunId {
     pub fn new(project_id: &str, commit: &str) -> Self {
-        Self(format!("{}_{}", project_id, commit))
+        Self(format!("{}::{}", project_id, commit))
     }
 
     pub fn value(&self) -> &str {

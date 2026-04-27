@@ -1,11 +1,11 @@
+use super::module::ModuleId;
+use super::run::RunId;
 
-
-
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SymbolId(String);
 
 impl SymbolId {
-    pub fn new(module_id: ModuleId, kind: SymbolKind, name: String, start_line: u32) -> Self {
+    pub fn new(module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: u32) -> Self {
         Self(format!(
             "{}::{}::{}::{}",
             module_id.value(),
@@ -20,12 +20,11 @@ impl SymbolId {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SymbolKind {
     Class,
     Function,
-    Variable,
-    Interface,
+    Method,
 }
 
 impl SymbolKind {
@@ -33,8 +32,7 @@ impl SymbolKind {
         match self {
             SymbolKind::Class => "class",
             SymbolKind::Function => "function",
-            SymbolKind::Variable => "variable",
-            SymbolKind::Interface => "interface",
+            SymbolKind::Method => "method",
         }
     }
 }
@@ -46,7 +44,7 @@ pub struct Symbol {
     pub module_id: ModuleId,
     pub name: String,
     pub kind: SymbolKind,
-    pub doc: String,  // Documentation string
+    pub doc: String,
     pub location: String,
     pub parent_symbol_id: Option<SymbolId>,
     pub start_line: u32,
@@ -65,7 +63,7 @@ impl Symbol {
         start_line: u32,
         end_line: u32,
     ) -> Self {
-        let id = SymbolId::new(module_id, kind, name, start_line);
+        let id = SymbolId::new(&module_id, &kind, &name, start_line);
         Self {
             id,
             run_id,

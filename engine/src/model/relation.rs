@@ -1,13 +1,16 @@
+use super::module::ModuleId;
+use super::run::RunId;
+use super::symbol::SymbolId;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RelationId(String);
 
 impl RelationId {
     pub fn new(
-        module_id: ModuleId,
-        kind: RelationKind,
-        imported_name: String,
-        source_path: String,
+        module_id: &ModuleId,
+        kind: &RelationKind,
+        imported_name: &str,
+        source_path: &str,
         line: u32,
     ) -> Self {
         Self(format!(
@@ -28,34 +31,25 @@ impl RelationId {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RelationKind {
     Import,
-    Call,
-    Extends,
-    Implements,
-    Uses,
 }
 
 impl RelationKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             RelationKind::Import => "import",
-            RelationKind::Call => "call",
-            RelationKind::Extends => "extends",
-            RelationKind::Implements => "implements",
-            RelationKind::Uses => "uses",
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Relation{
+pub struct Relation {
     pub id: RelationId,
     pub run_id: RunId,
     pub module_id: ModuleId,
     pub imported_name: String,
     pub source_path: String,
-    pub source_symbol_id: Option<SymbolId>,
-    pub target_symbol_id: SymbolId,
-    pub kind : RelationKind,
+    pub target_symbol_id: Option<SymbolId>,
+    pub kind: RelationKind,
     pub line: u32,
 }
 
@@ -66,15 +60,14 @@ impl Relation {
         kind: RelationKind,
         imported_name: String,
         source_path: String,
-        source_symbol_id: Option<SymbolId>,
-        target_symbol_id: SymbolId,
+        target_symbol_id: Option<SymbolId>,
         line: u32,
     ) -> Self {
         let id = RelationId::new(
-            module_id,
-            kind.clone(),
-            imported_name.clone(),
-            source_path.clone(),
+            &module_id,
+            &kind,
+            &imported_name,
+            &source_path,
             line,
         );
         Self {
@@ -83,7 +76,6 @@ impl Relation {
             module_id,
             imported_name,
             source_path,
-            source_symbol_id,
             target_symbol_id,
             kind,
             line,

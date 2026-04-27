@@ -7,12 +7,12 @@ pub enum ProjectError {
     InvalidRepositoryUrl,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProjectId(String);
 
 impl ProjectId {
     pub fn new(namespace: String, project_name: String) -> Self {
-        Self(format!("{}_{}", namespace, project_name))
+        Self(format!("{}::{}", namespace, project_name))
     }
 
     pub fn value(&self) -> &str {

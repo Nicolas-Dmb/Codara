@@ -1,11 +1,11 @@
 
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleId(String);
 
 impl ModuleId {
     pub fn new(project_id: ProjectId, relative_path: String) -> Self {
-        Self(format!("{}_{}", project_id.value(), relative_path))
+        Self(format!("{}::{}", project_id.value(), relative_path))
     }
 
     pub fn value(&self) -> &str {
