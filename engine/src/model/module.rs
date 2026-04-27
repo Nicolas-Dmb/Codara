@@ -1,6 +1,6 @@
 
 
-#[derive(Debug, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ModuleId(String);
 
 impl ModuleId {
@@ -15,7 +15,7 @@ impl ModuleId {
 
 #[derive(Debug)]
 pub struct Module{
-    pub name: ModuleId,
+    pub id: ModuleId,
     pub run_id: RunId,
     pub relative_path: String,
     pub name: String,
@@ -23,11 +23,12 @@ pub struct Module{
 
 impl Module {
     pub fn new(project_id: ProjectId, run_id: RunId, relative_path: String) -> Self {
-        let name = ModuleId::new(project_id, relative_path.clone());
+        let id = ModuleId::new(project_id, relative_path.clone());
         Self {
-            name,
+            id,
             run_id,
             relative_path,
+            name: relative_path.split('/').last().unwrap_or("").to_string(),
         }
     }
 }

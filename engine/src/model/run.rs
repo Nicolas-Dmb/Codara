@@ -1,7 +1,7 @@
 
 
 
-#[derive(Debug, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct RunId(String);
 
 impl RunId {

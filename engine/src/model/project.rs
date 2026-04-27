@@ -7,7 +7,7 @@ pub enum ProjectError {
     InvalidRepositoryUrl,
 }
 
-#[derive(Debug, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ProjectId(String);
 
 impl ProjectId {

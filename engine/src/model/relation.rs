@@ -53,9 +53,10 @@ pub struct Relation{
     pub module_id: ModuleId,
     pub imported_name: String,
     pub source_path: String,
-    pub source_symbol_id: SymbolId,
+    pub source_symbol_id: Option<SymbolId>,
     pub target_symbol_id: SymbolId,
     pub kind : RelationKind,
+    pub line: u32,
 }
 
 impl Relation {
@@ -65,7 +66,7 @@ impl Relation {
         kind: RelationKind,
         imported_name: String,
         source_path: String,
-        source_symbol_id: SymbolId,
+        source_symbol_id: Option<SymbolId>,
         target_symbol_id: SymbolId,
         line: u32,
     ) -> Self {
@@ -85,6 +86,7 @@ impl Relation {
             source_symbol_id,
             target_symbol_id,
             kind,
+            line,
         }
     }
 }
