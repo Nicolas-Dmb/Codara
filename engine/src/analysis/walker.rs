@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::fs;
+use crate::analysis::connector;
 use crate::model;
 use model::project::Project;
 use model::error::{RunError, AnalysisReport, RetryableIssue};
@@ -44,6 +45,8 @@ pub fn walk(
 
     let mut has_entry = false;
 
+    let adapters_registry = connector::AdapterRegistry::new();
+
     for entry in entries {
         has_entry = true;
 
@@ -62,7 +65,7 @@ pub fn walk(
         let entry_path = entry.path();
 
         if entry_path.is_file() {
-            // Plus tard : analyser le fichier
+            adapters_registry.find_and_extract(&entry_path.to_string_lossy().to_string(), &mut report);
             continue;
         }
 

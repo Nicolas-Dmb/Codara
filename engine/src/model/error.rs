@@ -36,7 +36,6 @@ pub enum RetryableIssue {
 pub enum AnalysisWarning {
     UnsupportedFileType {
         path: String,
-        extension: Option<String>,
     },
     UnsupportedSymbolKind {
         path: String,
