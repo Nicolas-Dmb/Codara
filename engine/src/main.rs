@@ -1,5 +1,7 @@
 mod config;
 mod services;
+mod model;
+mod analysis;
 
 #[tokio::main]
 async fn main(){

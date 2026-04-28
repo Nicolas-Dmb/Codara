@@ -1,4 +1,6 @@
-
+use crate::model::project::ProjectId;
+use crate::model::run::RunId;
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleId(String);
@@ -24,11 +26,17 @@ pub struct Module{
 impl Module {
     pub fn new(project_id: ProjectId, run_id: RunId, relative_path: String) -> Self {
         let id = ModuleId::new(project_id, relative_path.clone());
+        let name = Path::new(&relative_path)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("")
+            .to_string();
+        
         Self {
             id,
             run_id,
             relative_path,
-            name: relative_path.split('/').last().unwrap_or("").to_string(),
+            name,
         }
     }
 }
