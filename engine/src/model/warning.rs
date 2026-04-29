@@ -1,6 +1,14 @@
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
+pub enum ExtractionIssue {
+    #[error("analysis warning: {0}")]
+    Warning(AnalysisWarning),
+    #[error("retryable issue: {0}")]
+    Retryable(RetryableIssue),
+}
+
+#[derive(Debug, Error, PartialEq)]
 pub enum RetryableIssue {
     #[error("unreadable directory {path}: {reason}")]
     UnreadableDirectory {
@@ -28,6 +36,10 @@ pub enum RetryableIssue {
 pub enum AnalysisWarning {
     #[error("unsupported file type: {path}")]
     UnsupportedFileType {
+        path: String,
+    },
+    #[error("ignored file: {path}")]
+    IgnoredFile {
         path: String,
     },
     #[error("unsupported symbol kind '{kind}' in {path}")]

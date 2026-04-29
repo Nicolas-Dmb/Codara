@@ -13,5 +13,5 @@ pub use run::{Run, RunId, RunStatus};
 pub use symbol::{Symbol, SymbolId, SymbolKind, RawSymbol, RawSymbolId};
 pub use relation::{Relation, RelationId, RelationKind, RawRelation, RawRelationId, RawSymbolRelationId};
 pub use error::{ProjectError, RunError};
-pub use warning::{AnalysisWarning, RetryableIssue};
+pub use warning::{AnalysisWarning, RetryableIssue, ExtractionIssue};
 pub use analysis::AnalysisReport;

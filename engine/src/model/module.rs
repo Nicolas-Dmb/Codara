@@ -71,7 +71,13 @@ pub struct RawModule {
 }
 
 impl RawModule {
-    pub fn new(relative_path: String, name: String) -> Self {
+    pub fn new(relative_path: String) -> Self {
+        let name = Path::new(&relative_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
+
         Self {
             id: RawModuleId::new(&relative_path),
             relative_path,

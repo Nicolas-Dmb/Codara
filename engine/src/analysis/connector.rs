@@ -1,8 +1,8 @@
 use crate::adapters::default_adapters;
-use crate::model::{AnalysisWarning, RawModule};
+use crate::model::{AnalysisWarning, RawModule, ExtractionIssue};
 
 pub trait AdapterRegistryTrait {
-    fn find_and_extract(&self, url: &str) -> Result<RawModule, AnalysisWarning>;
+    fn find_and_extract(&self, url: &str) -> Result<RawModule, ExtractionIssue>;
 }
 pub struct AdapterRegistry {
     adapters: Vec<Box<dyn Adapter>>,
@@ -13,12 +13,12 @@ impl AdapterRegistry {
         AdapterRegistry { adapters: default_adapters() }
     }
 
-    fn find(&self, url: &str) -> Result<&dyn Adapter, AnalysisWarning> {
+    fn find(&self, url: &str) -> Result<&dyn Adapter, ExtractionIssue> {
         self.adapters
             .iter()
             .find(|adapter| adapter.can_handle(url))
             .map(|adapter| adapter.as_ref())
-            .ok_or_else(|| AnalysisWarning::UnsupportedFileType{path:url.to_string()})
+            .ok_or_else(|| ExtractionIssue::Warning(AnalysisWarning::UnsupportedFileType{path:url.to_string()}))
     }
 }
 
@@ -26,7 +26,7 @@ impl AdapterRegistryTrait for AdapterRegistry {
     fn find_and_extract(
         &self,
         url: &str,
-    ) -> Result<RawModule, AnalysisWarning> {
+    ) -> Result<RawModule, ExtractionIssue> {
         let adapter = self.find(url)?;
         adapter.extract(url)
     }
@@ -41,7 +41,13 @@ pub trait Adapter {
             .any(|ext| url.ends_with(ext))
     }
 
-    fn extract(&self, url: &str) -> Result<RawModule, AnalysisWarning>;
+    fn ignore_files(&self) -> &[&'static str];
+
+    fn should_ignore(&self, url: &str) -> bool {
+        self.ignore_files().iter().any(|ignore| url.ends_with(ignore))
+    }
+
+    fn extract(&self, url: &str) -> Result<RawModule, ExtractionIssue>;
 }
 
 #[cfg(test)]
@@ -54,8 +60,12 @@ mod adapter_registry_tests {
             &[".fake"]
         }
 
-        fn extract(&self, url: &str) -> Result<RawModule, AnalysisWarning> {
-            Ok(RawModule::new(url.to_string(), "fake_module".to_string()))
+        fn extract(&self, url: &str) -> Result<RawModule, ExtractionIssue> {
+            Ok(RawModule::new(url.to_string()))
+        }
+
+        fn ignore_files(&self) -> &[&'static str] {
+            &[]
         }
     }
 
@@ -73,7 +83,7 @@ mod adapter_registry_tests {
         assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
-            AnalysisWarning::UnsupportedFileType{path:"test.unknown".to_string()}
+            ExtractionIssue::Warning(AnalysisWarning::UnsupportedFileType{path:"test.unknown".to_string()})
         );
     }
 
