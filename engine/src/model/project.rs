@@ -1,11 +1,5 @@
-use chrono::{DateTime, Utc};
-
-
-pub enum ProjectError {
-    MissingRepositoryName,
-    MissingNamespace,
-    InvalidRepositoryUrl,
-}
+use std::fmt;
+use super::error::ProjectError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProjectId(String);
@@ -14,9 +8,11 @@ impl ProjectId {
     pub fn new(namespace: String, project_name: String) -> Self {
         Self(format!("{}::{}", namespace, project_name))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for ProjectId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -25,9 +21,6 @@ pub struct Project {
     pub id: ProjectId,
     pub name: String,
     pub repo_url: String,
-    pub branch: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
 }
 
 impl Project {
@@ -53,7 +46,7 @@ impl Project {
         Ok((namespace, name))
     }
 
-    pub fn new(repo_url: String, branch: String) -> Result<Self, ProjectError> {
+    pub fn new(repo_url: String) -> Result<Self, ProjectError> {
         let (namespace, name) = Self::split_repo_url(&repo_url)?;
 
         let id = ProjectId::new(namespace, name.clone());
@@ -62,9 +55,6 @@ impl Project {
             id,
             name,
             repo_url,
-            branch,
-            created_at: Utc::now(),
-            updated_at: None,
         })
     }
 }

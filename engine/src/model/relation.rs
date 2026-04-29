@@ -1,6 +1,7 @@
+use std::fmt;
 use super::module::ModuleId;
 use super::run::RunId;
-use super::symbol::SymbolId;
+use super::symbol::{RawSymbolId, SymbolId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RelationId(String);
@@ -15,16 +16,18 @@ impl RelationId {
     ) -> Self {
         Self(format!(
             "{}::{}::{}::{}::{}",
-            module_id.value(),
-            kind.as_str(),
+            module_id,
+            kind,
             source_path,
             imported_name,
             line
         ))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for RelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -33,10 +36,10 @@ pub enum RelationKind {
     Import,
 }
 
-impl RelationKind {
-    pub fn as_str(&self) -> &'static str {
+impl fmt::Display for RelationKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RelationKind::Import => "import",
+            RelationKind::Import => f.write_str("import"),
         }
     }
 }
@@ -80,5 +83,104 @@ impl Relation {
             kind,
             line,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RawRelationId(String);
+
+impl RawRelationId {
+    pub fn new(
+        kind: &RelationKind,
+        imported_name: &str,
+        source_path: &str,
+        line: u32,
+    ) -> Self {
+        Self(format!(
+            "{}::{}::{}::{}",
+            kind,
+            source_path,
+            imported_name,
+            line
+        ))
+    }
+}
+
+impl fmt::Display for RawRelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RawSymbolRelationId(String);
+
+impl RawSymbolRelationId {
+    pub fn new(
+        module_source: String,
+        source_path: String,
+    ) -> Self {
+        Self(format!(
+            "{}::{}",
+            module_source,
+            source_path,
+        ))
+    }
+}
+
+impl fmt::Display for RawSymbolRelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RawRelation {
+    pub id: RawRelationId,
+    pub imported_name: String,
+    pub source_path: String,
+    pub target_symbol_id: Option<RawSymbolId>,
+    pub kind: RelationKind,
+    pub line: u32,
+}
+
+impl RawRelation {
+    pub fn new(
+        kind: RelationKind,
+        imported_name: String,
+        source_path: String,
+        target_symbol_id: Option<RawSymbolId>,
+        line: u32,
+    ) -> Self {
+        let id = RawRelationId::new(
+            &kind,
+            &imported_name,
+            &source_path,
+            line,
+        );
+        Self {
+            id,
+            imported_name,
+            source_path,
+            target_symbol_id,
+            kind,
+            line,
+        }
+    }
+
+    pub fn into_relation(
+        self,
+        module_id: ModuleId,
+        run_id: RunId,
+    ) -> Relation {
+        Relation::new(
+            module_id,
+            run_id,
+            self.kind,
+            self.imported_name,
+            self.source_path,
+            None,
+            self.line,
+        )
     }
 }
