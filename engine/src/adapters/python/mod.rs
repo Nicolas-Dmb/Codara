@@ -1,6 +1,6 @@
 use crate::analysis::connector::Adapter;
-use crate::model::module::RawModule;
-use crate::model::warning::AnalysisWarning;
+use crate::model::{RawModule, AnalysisWarning};
+
 pub struct PythonAdapter {}
 
 impl Adapter for PythonAdapter {

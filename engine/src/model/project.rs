@@ -1,5 +1,5 @@
+use std::fmt;
 use super::error::ProjectError;
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProjectId(String);
@@ -8,9 +8,11 @@ impl ProjectId {
     pub fn new(namespace: String, project_name: String) -> Self {
         Self(format!("{}::{}", namespace, project_name))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for ProjectId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 

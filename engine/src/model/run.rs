@@ -1,3 +1,4 @@
+use std::fmt;
 use chrono::{DateTime, Utc};
 use super::project::ProjectId;
 
@@ -5,12 +6,14 @@ use super::project::ProjectId;
 pub struct RunId(String);
 
 impl RunId {
-    pub fn new(project_id: &str, commit: &str) -> Self {
+    pub fn new(project_id: &ProjectId, commit: &str) -> Self {
         Self(format!("{}::{}", project_id, commit))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for RunId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -35,7 +38,7 @@ pub struct Run {
 
 impl Run {
     pub fn new(project_id: ProjectId, branch: String, commit: String) -> Self {
-        let id = RunId::new(&project_id.value(), &commit);
+        let id = RunId::new(&project_id, &commit);
         Self {
             id,
             branch,
@@ -52,13 +55,14 @@ impl Run {
         self.started_at = Some(Utc::now());
     }
 
-    pub fn complete(&mut self, success: bool, error_message: Option<String>) {
-        self.status = if success {
-            RunStatus::Success
-        } else {
-            RunStatus::Failed
-        };
-        self.error_message = error_message;
+    pub fn succeed(&mut self) {
+        self.status = RunStatus::Success;
+        self.finished_at = Some(Utc::now());
+    }
+
+    pub fn fail(&mut self, error: String) {
+        self.status = RunStatus::Failed;
+        self.error_message = Some(error);
         self.finished_at = Some(Utc::now());
     }
 }

@@ -1,3 +1,4 @@
+use std::fmt;
 use super::module::ModuleId;
 use super::run::RunId;
 use super::symbol::{RawSymbolId, SymbolId};
@@ -15,16 +16,18 @@ impl RelationId {
     ) -> Self {
         Self(format!(
             "{}::{}::{}::{}::{}",
-            module_id.value(),
-            kind.as_str(),
+            module_id,
+            kind,
             source_path,
             imported_name,
             line
         ))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for RelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -33,10 +36,10 @@ pub enum RelationKind {
     Import,
 }
 
-impl RelationKind {
-    pub fn as_str(&self) -> &'static str {
+impl fmt::Display for RelationKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RelationKind::Import => "import",
+            RelationKind::Import => f.write_str("import"),
         }
     }
 }
@@ -83,7 +86,6 @@ impl Relation {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawRelationId(String);
 
@@ -96,20 +98,23 @@ impl RawRelationId {
     ) -> Self {
         Self(format!(
             "{}::{}::{}::{}",
-            kind.as_str(),
+            kind,
             source_path,
             imported_name,
             line
         ))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for RawRelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawSymbolRelationId(String);
+
 impl RawSymbolRelationId {
     pub fn new(
         module_source: String,
@@ -121,9 +126,11 @@ impl RawSymbolRelationId {
             source_path,
         ))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for RawSymbolRelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -159,5 +166,21 @@ impl RawRelation {
             kind,
             line,
         }
+    }
+
+    pub fn into_relation(
+        self,
+        module_id: ModuleId,
+        run_id: RunId,
+    ) -> Relation {
+        Relation::new(
+            module_id,
+            run_id,
+            self.kind,
+            self.imported_name,
+            self.source_path,
+            None,
+            self.line,
+        )
     }
 }

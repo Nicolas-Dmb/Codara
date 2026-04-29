@@ -242,6 +242,7 @@ dependencies = [
  "dotenvy",
  "sqlx",
  "tempfile",
+ "thiserror",
  "tokio",
 ]
 

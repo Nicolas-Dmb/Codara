@@ -1,3 +1,4 @@
+use std::fmt;
 use super::module::ModuleId;
 use super::run::RunId;
 
@@ -8,15 +9,17 @@ impl SymbolId {
     pub fn new(module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: u32) -> Self {
         Self(format!(
             "{}::{}::{}::{}",
-            module_id.value(),
-            kind.as_str(),
+            module_id,
+            kind,
             name,
             start_line
         ))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for SymbolId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -27,12 +30,12 @@ pub enum SymbolKind {
     Method,
 }
 
-impl SymbolKind {
-    pub fn as_str(&self) -> &'static str {
+impl fmt::Display for SymbolKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SymbolKind::Class => "class",
-            SymbolKind::Function => "function",
-            SymbolKind::Method => "method",
+            SymbolKind::Class => f.write_str("class"),
+            SymbolKind::Function => f.write_str("function"),
+            SymbolKind::Method => f.write_str("method"),
         }
     }
 }
@@ -86,16 +89,19 @@ impl RawSymbolId {
     pub fn new(kind: &SymbolKind, name: &str, start_line: u32) -> Self {
         Self(format!(
             "{}::{}::{}",
-            kind.as_str(),
+            kind,
             name,
             start_line
         ))
     }
+}
 
-    pub fn value(&self) -> &str {
-        &self.0
+impl fmt::Display for RawSymbolId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
+
 #[derive(Debug, PartialEq)]
 pub struct RawSymbol {
     pub id: RawSymbolId,
@@ -132,5 +138,25 @@ impl RawSymbol {
 
     pub fn add_child(&mut self, child: RawSymbol) {
         self.children_symbol.push(child);
+    }
+
+    pub fn into_symbol(
+        self,
+        module_id: ModuleId,
+        run_id: RunId,
+        parent_symbol_id: Option<SymbolId>,
+    ) -> (Symbol, Vec<RawSymbol>) {
+        let symbol = Symbol::new(
+            module_id,
+            run_id,
+            self.kind,
+            self.name,
+            self.doc,
+            self.location,
+            parent_symbol_id,
+            self.start_line,
+            self.end_line,
+        );
+        (symbol, self.children_symbol)
     }
 }

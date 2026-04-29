@@ -1,11 +1,7 @@
 use std::path::Path;
 use std::fs;
 use crate::analysis::connector;
-use crate::model;
-use model::project::Project;
-use model::error::RunError;
-use model::warning::{RetryableIssue};
-use model::analysis::AnalysisReport;
+use crate::model::{Project, Run, RunError, RetryableIssue, AnalysisReport};
 
 fn read_directory(
     path: &Path,
@@ -31,9 +27,9 @@ fn read_directory(
     }
 }
 
- 
+
 pub fn walk(
-    run: &model::run::Run,
+    run: &Run,
     project: &Project,
     path: &Path,
     is_root: bool,
@@ -91,11 +87,7 @@ mod walker_tests {
     use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
 
-    use crate::model::error::RunError;
-    use crate::model::module::RawModule;
-    use crate::model::warning::{AnalysisWarning, RetryableIssue};
-    use crate::model::project::Project;
-    use crate::model::run::Run;
+    use crate::model::{RunError, RawModule, AnalysisWarning, RetryableIssue, Project, Run};
 
     struct FakeAdapterRegistry;
     impl connector::AdapterRegistryTrait for FakeAdapterRegistry {
@@ -182,7 +174,7 @@ mod walker_tests {
 
         let (project, run) = setup();
 
-        
+
         let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
 
         assert_eq!(result.warnings.len(), 0);

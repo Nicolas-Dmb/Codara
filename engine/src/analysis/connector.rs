@@ -1,6 +1,5 @@
 use crate::adapters::default_adapters;
-use crate::model::warning::AnalysisWarning;
-use crate::model::module::{RawModule};
+use crate::model::{AnalysisWarning, RawModule};
 
 pub trait AdapterRegistryTrait {
     fn find_and_extract(&self, url: &str) -> Result<RawModule, AnalysisWarning>;
@@ -41,7 +40,7 @@ pub trait Adapter {
             .iter()
             .any(|ext| url.ends_with(ext))
     }
-    
+
     fn extract(&self, url: &str) -> Result<RawModule, AnalysisWarning>;
 }
 
