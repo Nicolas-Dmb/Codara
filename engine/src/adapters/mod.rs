@@ -6,6 +6,6 @@ use python::PythonAdapter;
 
 pub fn default_adapters() -> Vec<Box<dyn Adapter>> {
     vec![
-        Box::new(PythonAdapter::new()),
+        Box::new(PythonAdapter{}),
     ]
 }

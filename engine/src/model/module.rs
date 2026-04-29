@@ -1,6 +1,8 @@
 use crate::model::project::ProjectId;
 use crate::model::run::RunId;
 use std::path::Path;
+use crate::model::symbol::RawSymbol;
+use crate::model::relation::RawRelation;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleId(String);
@@ -40,3 +42,46 @@ impl Module {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RawModuleId(String);
+
+impl RawModuleId{
+    pub fn new(relative_path: &str) -> Self {
+        Self(relative_path.to_string())
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RawModule {
+    pub id: RawModuleId,
+    pub relative_path: String,
+    pub name: String,
+    pub symbols: Vec<RawSymbol>,
+    pub relations: Vec<RawRelation>,
+}
+
+impl RawModule {
+    pub fn new(relative_path: String, name: String) -> Self {
+        Self {
+            id: RawModuleId::new(&relative_path),
+            relative_path,
+            name,
+            symbols: Vec::new(),
+            relations: Vec::new(),
+        }
+    }
+
+    pub fn add_symbol(&mut self, symbol: RawSymbol) {
+        self.symbols.push(symbol);
+    }
+
+    pub fn add_relation(&mut self, relation: RawRelation) {
+        self.relations.push(relation);
+    }
+}
+           

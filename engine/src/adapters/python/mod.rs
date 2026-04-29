@@ -1,24 +1,16 @@
 use crate::analysis::connector::Adapter;
-
-pub struct PythonAdapter {
-    supported_extensions: Vec<String>,
-}
-
-impl PythonAdapter {
-    pub fn new() -> Self {
-        PythonAdapter {
-            supported_extensions: vec![".py".to_string()],
-        }
-    }
-}
+use crate::model::module::RawModule;
+use crate::model::warning::AnalysisWarning;
+pub struct PythonAdapter {}
 
 impl Adapter for PythonAdapter {
 
-    fn can_handle(&self, url: &str) -> bool {
-        self.supported_extensions
-            .iter()
-            .any(|ext| url.ends_with(ext))
+    fn supported_extensions(&self) -> &[&'static str] {
+        &[".py"]
     }
 
-    fn extract(&self, url: &str) {}
+    fn extract(&self, url: &str)-> Result<RawModule, AnalysisWarning>{
+        // Implementation for extracting Python module information
+        unimplemented!()
+    }
 }

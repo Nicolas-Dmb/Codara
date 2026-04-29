@@ -4,4 +4,5 @@ pub mod run;
 pub mod symbol;
 pub mod relation;
 pub mod error;
-pub mod extractor;
+pub mod warning;
+pub mod analysis;

@@ -3,7 +3,9 @@ use std::fs;
 use crate::analysis::connector;
 use crate::model;
 use model::project::Project;
-use model::error::{RunError, AnalysisReport, RetryableIssue};
+use model::error::RunError;
+use model::warning::{RetryableIssue};
+use model::analysis::AnalysisReport;
 
 fn read_directory(
     path: &Path,
@@ -35,6 +37,7 @@ pub fn walk(
     project: &Project,
     path: &Path,
     is_root: bool,
+    adapters_registry: &dyn connector::AdapterRegistryTrait,
 ) -> Result<AnalysisReport, RunError> {
     let mut report = AnalysisReport::new();
 
@@ -43,12 +46,7 @@ pub fn walk(
         Err(local_report) => return Ok(local_report),
     };
 
-    let mut has_entry = false;
-
-    let adapters_registry = connector::AdapterRegistry::new();
-
     for entry in entries {
-        has_entry = true;
 
         let entry = match entry {
             Ok(entry) => entry,
@@ -65,17 +63,21 @@ pub fn walk(
         let entry_path = entry.path();
 
         if entry_path.is_file() {
-            adapters_registry.find_and_extract(&entry_path.to_string_lossy().to_string(), &mut report);
+            let result = adapters_registry.find_and_extract(&entry_path.to_string_lossy().to_string());
+            match result {
+                Ok(raw_module) => report.add_module(raw_module),
+                Err(warning) => report.add_warning(warning),
+            }
             continue;
         }
 
         if entry_path.is_dir() {
-            let child_report = walk(run, project, &entry_path, false)?;
+            let child_report = walk(run, project, &entry_path, false, adapters_registry)?;
             report.merge(child_report);
         }
     }
 
-    if is_root && !has_entry {
+    if is_root && !report.has_data() {
         return Err(RunError::EmptyRepository);
     }
 
@@ -89,9 +91,25 @@ mod walker_tests {
     use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
 
-    use crate::model::error::{AnalysisReport, RetryableIssue, RunError};
+    use crate::model::error::RunError;
+    use crate::model::module::RawModule;
+    use crate::model::warning::{AnalysisWarning, RetryableIssue};
     use crate::model::project::Project;
     use crate::model::run::Run;
+
+    struct FakeAdapterRegistry;
+    impl connector::AdapterRegistryTrait for FakeAdapterRegistry {
+        fn find_and_extract(
+            &self,
+            url: &str,
+        ) -> Result<RawModule, AnalysisWarning> {
+            if (url.ends_with(".py")) {
+                Ok(RawModule::new(url.to_string(), Path::new(url).file_name().and_then(|name| name.to_str()).unwrap_or("").to_string()))
+            } else {
+                Err(AnalysisWarning::UnsupportedFileType{path:url.to_string()})
+            }
+        }
+    }
 
     fn setup() -> (Project, Run) {
         let project = Project::new("https://github.com/test/repo.git".to_string()).unwrap();
@@ -106,7 +124,7 @@ mod walker_tests {
         let (project, run) = setup();
 
         assert_eq!(
-            walk(&run, &project, temp_dir.path(), true),
+            walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry),
             Err(RunError::EmptyRepository)
         );
     }
@@ -120,7 +138,7 @@ mod walker_tests {
         fs::set_permissions(&subdir, fs::Permissions::from_mode(0o000)).unwrap();
 
         let (project, run) = setup();
-        let result = walk(&run, &project, temp_dir.path(), true).unwrap();
+        let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
 
         assert_eq!(result.retryables.len(), 1);
         assert_eq!(result.warnings.len(), 0);
@@ -143,7 +161,7 @@ mod walker_tests {
         let (project, run) = setup();
 
         assert!(matches!(
-            walk(&run, &project, temp_dir.path(), true),
+            walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry),
             Err(RunError::ReadRepositoryFailed(_))
         ));
 
@@ -164,9 +182,35 @@ mod walker_tests {
 
         let (project, run) = setup();
 
-        assert_eq!(
-            walk(&run, &project, temp_dir.path(), true),
-            Ok(AnalysisReport::new())
-        );
+        
+        let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
+
+        assert_eq!(result.warnings.len(), 0);
+        assert_eq!(result.retryables.len(), 0);
+        assert_eq!(result.raw_modules.len(), 2);
+
+        assert!(result.raw_modules.iter().any(|m| m.relative_path == temp_dir.path().join("file1.py").to_string_lossy().to_string()));
+        assert!(result.raw_modules.iter().any(|m| m.relative_path == file2.to_string_lossy().to_string()));
+    }
+
+    #[test]
+    fn test_with_unsupported_files(){
+        let temp_dir = tempdir().unwrap();
+
+        fs::write(temp_dir.path().join("file1.txt"), "content1").unwrap();
+
+        let (project, run) = setup();
+
+        let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
+
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.retryables.len(), 0);
+
+        match &result.warnings[0] {
+            AnalysisWarning::UnsupportedFileType { path } => {
+                assert_eq!(path, &temp_dir.path().join("file1.txt").to_string_lossy().to_string());
+            }
+            _ => panic!("Expected unsupported file type warning"),
+        }
     }
 }

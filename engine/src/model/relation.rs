@@ -1,6 +1,6 @@
 use super::module::ModuleId;
 use super::run::RunId;
-use super::symbol::SymbolId;
+use super::symbol::{RawSymbolId, SymbolId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RelationId(String);
@@ -74,6 +74,85 @@ impl Relation {
             id,
             run_id,
             module_id,
+            imported_name,
+            source_path,
+            target_symbol_id,
+            kind,
+            line,
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RawRelationId(String);
+
+impl RawRelationId {
+    pub fn new(
+        kind: &RelationKind,
+        imported_name: &str,
+        source_path: &str,
+        line: u32,
+    ) -> Self {
+        Self(format!(
+            "{}::{}::{}::{}",
+            kind.as_str(),
+            source_path,
+            imported_name,
+            line
+        ))
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+
+pub struct RawSymbolRelationId(String);
+impl RawSymbolRelationId {
+    pub fn new(
+        module_source: String,
+        source_path: String,
+    ) -> Self {
+        Self(format!(
+            "{}::{}",
+            module_source,
+            source_path,
+        ))
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RawRelation {
+    pub id: RawRelationId,
+    pub imported_name: String,
+    pub source_path: String,
+    pub target_symbol_id: Option<RawSymbolId>,
+    pub kind: RelationKind,
+    pub line: u32,
+}
+
+impl RawRelation {
+    pub fn new(
+        kind: RelationKind,
+        imported_name: String,
+        source_path: String,
+        target_symbol_id: Option<RawSymbolId>,
+        line: u32,
+    ) -> Self {
+        let id = RawRelationId::new(
+            &kind,
+            &imported_name,
+            &source_path,
+            line,
+        );
+        Self {
+            id,
             imported_name,
             source_path,
             target_symbol_id,

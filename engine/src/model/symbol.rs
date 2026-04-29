@@ -78,3 +78,59 @@ impl Symbol {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RawSymbolId(String);
+
+impl RawSymbolId {
+    pub fn new(kind: &SymbolKind, name: &str, start_line: u32) -> Self {
+        Self(format!(
+            "{}::{}::{}",
+            kind.as_str(),
+            name,
+            start_line
+        ))
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+#[derive(Debug, PartialEq)]
+pub struct RawSymbol {
+    pub id: RawSymbolId,
+    pub name: String,
+    pub kind: SymbolKind,
+    pub doc: String,
+    pub location: String,
+    pub children_symbol: Vec<RawSymbol>,
+    pub start_line: u32,
+    pub end_line: u32,
+}
+
+impl RawSymbol {
+    pub fn new(
+        name: String,
+        kind: SymbolKind,
+        doc: String,
+        location: String,
+        start_line: u32,
+        end_line: u32,
+    ) -> Self {
+        let id = RawSymbolId::new(&kind, &name, start_line);
+        Self {
+            id,
+            name,
+            kind,
+            doc,
+            location,
+            children_symbol: Vec::new(),
+            start_line,
+            end_line,
+        }
+    }
+
+    pub fn add_child(&mut self, child: RawSymbol) {
+        self.children_symbol.push(child);
+    }
+}
