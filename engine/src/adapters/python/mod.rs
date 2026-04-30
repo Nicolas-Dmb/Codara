@@ -67,7 +67,7 @@ fn visit_node(node: tree_sitter::Node,scope:Scope, source_code: &str, symbols: &
 
 fn extract_class(node: tree_sitter::Node, source_code: &str, path: &str)-> Result<RawSymbol, ExtractionIssue>{
     let class_name = extract_name(node, source_code, path)?;
-    let class_doc = extract_docstring(node, source_code, path)?;
+    let class_doc = extract_docstring(node, source_code);
     
     let mut symbol = RawSymbol::new(
         class_name,
@@ -93,7 +93,7 @@ fn extract_class(node: tree_sitter::Node, source_code: &str, path: &str)-> Resul
 
 fn extract_function(node: tree_sitter::Node, scope:Scope, source_code: &str, path: &str)->Result<RawSymbol, ExtractionIssue>{
     let function_name = extract_name(node, source_code, path)?;
-    let function_doc = extract_docstring(node, source_code, path)?;
+    let function_doc = extract_docstring(node, source_code);
     let kind = if scope == Scope::Class {
         SymbolKind::Method
     } else {
@@ -110,7 +110,7 @@ fn extract_function(node: tree_sitter::Node, scope:Scope, source_code: &str, pat
 }
 
 
-fn extract_docstring(node: tree_sitter::Node, source_code: &str, path: &str) -> Result<String, ExtractionIssue> {
+fn extract_docstring(node: tree_sitter::Node, source_code: &str) -> String {
     if let Some(body) = node.child_by_field_name("body") {
         let mut cursor = body.walk();
 
@@ -120,37 +120,451 @@ fn extract_docstring(node: tree_sitter::Node, source_code: &str, path: &str) -> 
                     if string_node.kind() == "string" {
                         return string_node
                             .utf8_text(source_code.as_bytes())
-                            .map_err(|e| ExtractionIssue::Retryable(RetryableIssue::AdapterFailed{
-                                path: path.to_string(),
-                                reason: format!("Failed to extract docstring: {}", e),
-                            }))
-                            .map(|s| s.to_string());
+                            .expect("source is &str, always valid UTF-8")
+                            .to_string();
                     }
                 }
             }
         }
     }
 
-    Ok("".to_string())
+    String::new()
 }
 
 fn extract_name(node: tree_sitter::Node, source_code: &str, path: &str) -> Result<String, ExtractionIssue> {
-    let name_node = node.child_by_field_name("name").ok_or_else(|| 
+    let name_node = node.child_by_field_name("name").ok_or_else(||
         ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax{
             path: path.to_string(),
             reason: format!("Missing name in line '{}'", node.start_position().row + 1),
         })
     )?;
 
-    let name = name_node.utf8_text(source_code.as_bytes());
-    match name {
-        Ok(name) => Ok(name.to_string()),
-        Err(e) => {
-            Err(ExtractionIssue::Retryable(RetryableIssue::AdapterFailed{
-                path:path.to_string(),
-                reason: format!("Failed to extract name: {}", e),
-            }))
+    Ok(name_node
+        .utf8_text(source_code.as_bytes())
+        .expect("source is &str, always valid UTF-8")
+        .to_string())
+}
+
+#[cfg(test)]
+mod extract_tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    fn adapter() -> PythonAdapter {
+        PythonAdapter {}
+    }
+
+    #[test]
+    fn test_extract_ignored_file() {
+        let result = adapter().extract("some/path/__init__.py");
+        assert_eq!(
+            result.unwrap_err(),
+            ExtractionIssue::Warning(AnalysisWarning::IgnoredFile {
+                path: "some/path/__init__.py".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_extract_unreadable_file() {
+        let result = adapter().extract("/nonexistent/path/file.py");
+        assert!(matches!(
+            result.unwrap_err(),
+            ExtractionIssue::Retryable(RetryableIssue::UnreadableFile { .. })
+        ));
+    }
+
+    #[test]
+    fn test_extractor_propagates_error() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+        let root = tree.root_node();
+
+        let result = extract_name(root, source, "test.py");
+        assert_eq!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
+                path: "test.py".to_string(),
+                reason: "Missing name in line '1'".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_extract_returns_raw_module() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("example.py");
+        let mut file = File::create(&file_path).unwrap();
+        write!(file, r#"class Foo:
+    """Foo doc"""
+    def bar(self):
+        pass
+
+def baz():
+    """baz doc"""
+    return 1
+"#).unwrap();
+
+        let url = file_path.to_string_lossy().to_string();
+        let module = adapter().extract(&url).unwrap();
+
+        assert_eq!(module.relative_path, url);
+        assert_eq!(module.name, "example.py");
+        assert_eq!(module.symbols.len(), 2);
+
+        let class = &module.symbols[0];
+        assert_eq!(class.name, "Foo");
+        assert_eq!(class.kind, SymbolKind::Class);
+        assert_eq!(class.children_symbol.len(), 1);
+
+        let method = &class.children_symbol[0];
+        assert_eq!(method.name, "bar");
+        assert_eq!(method.kind, SymbolKind::Method);
+
+        let func = &module.symbols[1];
+        assert_eq!(func.name, "baz");
+        assert_eq!(func.kind, SymbolKind::Function);
+    }
+}
+
+#[cfg(test)]
+mod extractor_tests {
+    use super::*;
+
+    #[test]
+    fn test_extractor_returns_symbols() {
+        let source = r#"class Foo:
+    """Foo doc"""
+    def bar(self):
+        pass
+
+def baz():
+    return 1
+"#;
+        let tree = parse_code(source);
+        let symbols = extractor(&tree, source, "test.py").unwrap();
+
+        assert_eq!(symbols.len(), 2);
+
+        assert_eq!(symbols[0].name, "Foo");
+        assert_eq!(symbols[0].kind, SymbolKind::Class);
+        assert_eq!(symbols[0].children_symbol.len(), 1);
+        assert_eq!(symbols[0].children_symbol[0].name, "bar");
+        assert_eq!(symbols[0].children_symbol[0].kind, SymbolKind::Method);
+
+        assert_eq!(symbols[1].name, "baz");
+        assert_eq!(symbols[1].kind, SymbolKind::Function);
+    }
+
+}
+
+#[cfg(test)]
+mod visit_node_tests {
+    use super::*;
+
+    fn get_first_child_of_kind<'a>(node: tree_sitter::Node<'a>, kind: &str) -> tree_sitter::Node<'a> {
+        let mut cursor = node.walk();
+        node.children(&mut cursor)
+            .find(|c| c.kind() == kind)
+            .unwrap_or_else(|| panic!("no child of kind '{kind}' found"))
+    }
+
+    #[test]
+    fn test_class_definition_success() {
+        let source = "class Foo:\n    pass\n";
+        let tree = parse_code(source);
+        let class_node = get_first_child_of_kind(tree.root_node(), "class_definition");
+
+        let mut symbols = Vec::new();
+        visit_node(class_node, Scope::Module, source, &mut symbols, "test.py").unwrap();
+
+        assert_eq!(symbols.len(), 1);
+        assert_eq!(symbols[0].name, "Foo");
+        assert_eq!(symbols[0].kind, SymbolKind::Class);
+    }
+
+    #[test]
+    fn test_class_definition_error() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+
+        let result = extract_class(tree.root_node(), source, "test.py");
+        assert!(matches!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax { .. })
+        ));
+    }
+
+    #[test]
+    fn test_function_definition_success() {
+        let source = "def bar():\n    pass\n";
+        let tree = parse_code(source);
+        let func_node = get_first_child_of_kind(tree.root_node(), "function_definition");
+
+        let mut symbols = Vec::new();
+        visit_node(func_node, Scope::Module, source, &mut symbols, "test.py").unwrap();
+
+        assert_eq!(symbols.len(), 1);
+        assert_eq!(symbols[0].name, "bar");
+        assert_eq!(symbols[0].kind, SymbolKind::Function);
+    }
+
+    #[test]
+    fn test_function_definition_error() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+
+        let result = extract_function(tree.root_node(), Scope::Module, source, "test.py");
+        assert!(matches!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax { .. })
+        ));
+    }
+
+    #[test]
+    fn test_children_recursion_success() {
+        let source = "def foo():\n    pass\n\nclass Bar:\n    pass\n";
+        let tree = parse_code(source);
+
+        let mut symbols = Vec::new();
+        visit_node(tree.root_node(), Scope::Module, source, &mut symbols, "test.py").unwrap();
+
+        assert_eq!(symbols.len(), 2);
+        assert_eq!(symbols[0].name, "foo");
+        assert_eq!(symbols[0].kind, SymbolKind::Function);
+        assert_eq!(symbols[1].name, "Bar");
+        assert_eq!(symbols[1].kind, SymbolKind::Class);
+    }
+
+    #[test]
+    fn test_children_recursion_stops_on_first_error() {
+        let source = "def foo():\n    pass\n";
+        let tree = parse_code(source);
+
+        let mut symbols = Vec::new();
+        visit_node(tree.root_node(), Scope::Module, source, &mut symbols, "test.py").unwrap();
+        assert_eq!(symbols.len(), 1);
+
+        let result = extract_class(tree.root_node(), source, "test.py");
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod extract_class_tests {
+    use super::*;
+
+    fn find_node_by_kind<'a>(node: tree_sitter::Node<'a>, kind: &str) -> Option<tree_sitter::Node<'a>> {
+        if node.kind() == kind {
+            return Some(node);
         }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Some(found) = find_node_by_kind(child, kind) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn test_name_error() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+
+        let result = extract_class(tree.root_node(), source, "test.py");
+        assert_eq!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
+                path: "test.py".to_string(),
+                reason: "Missing name in line '1'".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_body_error() {
+        let source = "foo(bar=1)";
+        let tree = parse_code(source);
+        let kwarg = find_node_by_kind(tree.root_node(), "keyword_argument").unwrap();
+
+        let result = extract_class(kwarg, source, "test.py");
+        assert_eq!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
+                path: "test.py".to_string(),
+                reason: "Missing body for class in line '1'".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_success() {
+        let source = "class Foo:\n    \"\"\"Foo doc\"\"\"\n    def bar(self):\n        pass\n";
+        let tree = parse_code(source);
+        let class_node = find_node_by_kind(tree.root_node(), "class_definition").unwrap();
+
+        let symbol = extract_class(class_node, source, "test.py").unwrap();
+
+        assert_eq!(symbol.name, "Foo");
+        assert_eq!(symbol.kind, SymbolKind::Class);
+        assert_eq!(symbol.doc, "\"\"\"Foo doc\"\"\"");
+        assert_eq!(symbol.start_line, 1);
+        assert_eq!(symbol.end_line, 4);
+        assert_eq!(symbol.children_symbol.len(), 1);
+        assert_eq!(symbol.children_symbol[0].name, "bar");
+        assert_eq!(symbol.children_symbol[0].kind, SymbolKind::Method);
+    }
+}
+
+#[cfg(test)]
+mod extract_function_tests {
+    use super::*;
+
+    fn find_node_by_kind<'a>(node: tree_sitter::Node<'a>, kind: &str) -> Option<tree_sitter::Node<'a>> {
+        if node.kind() == kind {
+            return Some(node);
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Some(found) = find_node_by_kind(child, kind) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn test_name_error() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+
+        let result = extract_function(tree.root_node(), Scope::Module, source, "test.py");
+        assert_eq!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
+                path: "test.py".to_string(),
+                reason: "Missing name in line '1'".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_success_function() {
+        let source = "def foo():\n    \"\"\"foo doc\"\"\"\n    return 1\n";
+        let tree = parse_code(source);
+        let func_node = find_node_by_kind(tree.root_node(), "function_definition").unwrap();
+
+        let symbol = extract_function(func_node, Scope::Module, source, "test.py").unwrap();
+
+        assert_eq!(symbol.name, "foo");
+        assert_eq!(symbol.kind, SymbolKind::Function);
+        assert_eq!(symbol.doc, "\"\"\"foo doc\"\"\"");
+        assert_eq!(symbol.start_line, 1);
+        assert_eq!(symbol.end_line, 3);
+    }
+
+    #[test]
+    fn test_success_method() {
+        let source = "class Foo:\n    def bar(self):\n        \"\"\"bar doc\"\"\"\n        pass\n";
+        let tree = parse_code(source);
+        let method_node = find_node_by_kind(tree.root_node(), "function_definition").unwrap();
+
+        let symbol = extract_function(method_node, Scope::Class, source, "test.py").unwrap();
+
+        assert_eq!(symbol.name, "bar");
+        assert_eq!(symbol.kind, SymbolKind::Method);
+        assert_eq!(symbol.doc, "\"\"\"bar doc\"\"\"");
+        assert_eq!(symbol.start_line, 2);
+        assert_eq!(symbol.end_line, 4);
+    }
+}
+
+#[cfg(test)]
+mod extract_docstring_tests {
+    use super::*;
+
+    fn find_node_by_kind<'a>(node: tree_sitter::Node<'a>, kind: &str) -> Option<tree_sitter::Node<'a>> {
+        if node.kind() == kind {
+            return Some(node);
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Some(found) = find_node_by_kind(child, kind) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn test_body_without_docstring() {
+        let source = "class Foo:\n    x = 1\n";
+        let tree = parse_code(source);
+        let class_node = find_node_by_kind(tree.root_node(), "class_definition").unwrap();
+
+        assert_eq!(extract_docstring(class_node, source), "");
+    }
+
+    #[test]
+    fn test_with_docstring() {
+        let source = "def foo():\n    \"\"\"my doc\"\"\"\n    pass\n";
+        let tree = parse_code(source);
+        let func_node = find_node_by_kind(tree.root_node(), "function_definition").unwrap();
+
+        assert_eq!(extract_docstring(func_node, source), "\"\"\"my doc\"\"\"");
+    }
+
+    #[test]
+    fn test_without_body() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+
+        assert_eq!(extract_docstring(tree.root_node(), source), "");
+    }
+}
+
+#[cfg(test)]
+mod extract_name_tests {
+    use super::*;
+
+    fn find_node_by_kind<'a>(node: tree_sitter::Node<'a>, kind: &str) -> Option<tree_sitter::Node<'a>> {
+        if node.kind() == kind {
+            return Some(node);
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Some(found) = find_node_by_kind(child, kind) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn test_missing_name_field() {
+        let source = "x = 1";
+        let tree = parse_code(source);
+
+        let result = extract_name(tree.root_node(), source, "test.py");
+        assert_eq!(
+            result.unwrap_err(),
+            ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
+                path: "test.py".to_string(),
+                reason: "Missing name in line '1'".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_success() {
+        let source = "def foo():\n    pass\n";
+        let tree = parse_code(source);
+        let func_node = find_node_by_kind(tree.root_node(), "function_definition").unwrap();
+
+        assert_eq!(extract_name(func_node, source, "test.py").unwrap(), "foo");
     }
 }
 

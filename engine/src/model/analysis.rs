@@ -1,10 +1,11 @@
 use crate::model::module::RawModule;
-use crate::model::warning::{AnalysisWarning,RetryableIssue};
+use crate::model::warning::{AnalysisWarning,RetryableIssue,SourceCodeIssue};
 
 #[derive(Debug, Default, PartialEq)]
 pub struct AnalysisReport {
     pub retryables: Vec<RetryableIssue>,
     pub warnings: Vec<AnalysisWarning>,
+    pub source_code_issues: Vec<SourceCodeIssue>,
     pub raw_modules: Vec<RawModule>,
 }
 
@@ -13,6 +14,7 @@ impl AnalysisReport {
         Self {
             retryables: Vec::new(),
             warnings: Vec::new(),
+            source_code_issues: Vec::new(),
             raw_modules: Vec::new(),
         }
     }
@@ -25,9 +27,14 @@ impl AnalysisReport {
         self.warnings.push(warning);
     }
 
+    pub fn add_source_code_issue(&mut self, issue: SourceCodeIssue) {
+        self.source_code_issues.push(issue);
+    }
+
     pub fn merge(&mut self, other: AnalysisReport) {
         self.retryables.extend(other.retryables);
         self.warnings.extend(other.warnings);
+        self.source_code_issues.extend(other.source_code_issues);
         self.raw_modules.extend(other.raw_modules);
     }
 

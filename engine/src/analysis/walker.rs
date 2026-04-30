@@ -73,6 +73,10 @@ pub fn walk(
                 Err(ExtractionIssue::Retryable(retryable)) => {
                     report.add_retryable(retryable);
                 }
+
+                Err(ExtractionIssue::SourceCodeError(issue)) => {
+                    report.add_source_code_issue(issue);
+                }
             }
             continue;
         }
