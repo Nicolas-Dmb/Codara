@@ -1,5 +1,6 @@
+use std::fmt;
 use crate::analysis::connector::Adapter;
-use crate::model::{AnalysisWarning, ExtractionIssue, RawModule, RawSymbol, RelationKind, SymbolKind, RetryableIssue, SourceCodeIssue};
+use crate::model::{AnalysisWarning, ExtractionIssue, RawModule, RawSymbol, RelationKind, SymbolKind, SourceCodeIssue, RawRelation, ExtractedItems};
 mod parser;
     use parser::parse_code;
 pub struct PythonAdapter {}
@@ -24,9 +25,10 @@ impl Adapter for PythonAdapter {
 
         let ast_code = parse_code(&source_code);
         
-        let symbols = extractor(&ast_code, &source_code, url)?;
+        let items = extractor(&ast_code, &source_code, url)?;
 
-        symbols.into_iter().for_each(|symbol| raw_module.add_symbol(symbol));
+        items.symbols.into_iter().for_each(|symbol| raw_module.add_symbol(symbol));
+        items.relations.into_iter().for_each(|relation| raw_module.add_relation(relation));
 
         Ok(raw_module)
     }
@@ -36,29 +38,46 @@ impl Adapter for PythonAdapter {
 enum Scope {
     Module,
     Class,
+    Function,
+}
+
+impl fmt::Display for Scope {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Scope::Module => f.write_str("module"),
+            Scope::Class => f.write_str("class"),
+            Scope::Function => f.write_str("function"),
+        }
+    }
 }
 
 fn extractor( tree: &tree_sitter::Tree, source_code: &str, path: &str) 
-    -> Result<Vec<RawSymbol>, ExtractionIssue> {
-    let mut symbols = Vec::new();
+    -> Result<ExtractedItems, ExtractionIssue> {
+    let mut items = ExtractedItems {
+        symbols: Vec::new(),
+        relations: Vec::new(),
+    };
     let root = tree.root_node();
 
-    visit_node(root, Scope::Module, source_code, &mut symbols, path)?;
+    visit_node(root, Scope::Module, source_code, &mut items, path)?;
 
-    Ok(symbols)
+    Ok(items)
 }
 
-fn visit_node(node: tree_sitter::Node,scope:Scope, source_code: &str, symbols: &mut Vec<RawSymbol>, path: &str)-> Result<(), ExtractionIssue> {
+fn visit_node(node: tree_sitter::Node,scope:Scope, source_code: &str, items: &mut ExtractedItems, path: &str)-> Result<(), ExtractionIssue> {
     match node.kind() {
         "class_definition" => {
-            symbols.push(extract_class(node, source_code, path)?);
+            items.symbols.push(extract_class(node, source_code, path)?);
         }
         "function_definition" => {
-            symbols.push(extract_function(node, scope.clone(), source_code, path)?);
+            items.symbols.push(extract_function(node, scope.clone(), source_code, path)?);
+        }
+        "import_statement" | "import_from_statement" => {
+            items.relations.extend(extract_import(node, source_code, path)?);
         }
         _ => {
             for child in node.children(&mut node.walk()) {
-                visit_node(child, scope.clone(), source_code, symbols, path)?;
+                visit_node(child, scope.clone(), source_code, items, path)?;
             }
         }
     }
@@ -66,7 +85,7 @@ fn visit_node(node: tree_sitter::Node,scope:Scope, source_code: &str, symbols: &
 }
 
 fn extract_class(node: tree_sitter::Node, source_code: &str, path: &str)-> Result<RawSymbol, ExtractionIssue>{
-    let class_name = extract_name(node, source_code, path)?;
+    let class_name = extract_name_from_symbol(node, source_code, path)?;
     let class_doc = extract_docstring(node, source_code);
     
     let mut symbol = RawSymbol::new(
@@ -76,39 +95,70 @@ fn extract_class(node: tree_sitter::Node, source_code: &str, path: &str)-> Resul
         node.start_position().row + 1,
         node.end_position().row + 1,
     );
-    let mut children = Vec::new();
 
-    let child_node = node.child_by_field_name("body")
-        .ok_or_else(|| ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax{
-            path: path.to_string(),
-            reason: format!("Missing body for class in line '{}'", node.start_position().row + 1),
-        }))?;
-    visit_node(child_node, Scope::Class, source_code,  &mut children, path)?;
-    children
-    .into_iter()
-    .for_each(|child| symbol.add_child(child));
+    extract_symbol_body(node, source_code, path, &mut symbol, Scope::Class)?;
 
     Ok(symbol)
 }
 
 fn extract_function(node: tree_sitter::Node, scope:Scope, source_code: &str, path: &str)->Result<RawSymbol, ExtractionIssue>{
-    let function_name = extract_name(node, source_code, path)?;
+    let function_name = extract_name_from_symbol(node, source_code, path)?;
     let function_doc = extract_docstring(node, source_code);
     let kind = if scope == Scope::Class {
         SymbolKind::Method
     } else {
         SymbolKind::Function
     };
-    let function_symbol = RawSymbol::new(
+    let mut function_symbol = RawSymbol::new(
         function_name,
         kind,
         function_doc,
         node.start_position().row + 1,
         node.end_position().row + 1,
     );
+
+    extract_symbol_body(node, source_code, path,&mut function_symbol, Scope::Function)?;
+
     Ok(function_symbol)
 }
 
+fn extract_symbol_body(node: tree_sitter::Node, source_code: &str, path: &str, symbol: &mut RawSymbol, scope: Scope) -> Result<(), ExtractionIssue> {
+    let mut children = ExtractedItems {
+        symbols: Vec::new(),
+        relations: Vec::new(),
+    };
+
+    let child_node = node.child_by_field_name("body")
+        .ok_or_else(|| ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax{
+            path: path.to_string(),
+            reason: format!("Missing body for {} in line '{}'", scope, node.start_position().row + 1),
+        }))?;
+    visit_node(child_node, scope, source_code,  &mut children, path)?;
+
+    children.symbols
+    .into_iter()
+    .for_each(|child| symbol.add_children_symbol(child));
+    children.relations
+    .into_iter()
+    .for_each(|relation| symbol.add_children_relation(relation));
+
+    Ok(())
+}
+
+fn extract_import(node: tree_sitter::Node, source_code: &str, path: &str) -> Result<Vec<RawRelation>, ExtractionIssue> {
+    let imported_names = extract_name_from_import(node, source_code)?;
+
+    let relations: Vec<RawRelation> = imported_names.into_iter().map(|imported_name| {
+        RawRelation::new(
+            RelationKind::Import,
+            imported_name,
+            path.to_string(),
+        None,
+        node.start_position().row + 1,
+        )
+    }).collect();
+    Ok(relations)
+}
 
 fn extract_docstring(node: tree_sitter::Node, source_code: &str) -> String {
     if let Some(body) = node.child_by_field_name("body") {
@@ -131,7 +181,7 @@ fn extract_docstring(node: tree_sitter::Node, source_code: &str) -> String {
     String::new()
 }
 
-fn extract_name(node: tree_sitter::Node, source_code: &str, path: &str) -> Result<String, ExtractionIssue> {
+fn extract_name_from_symbol(node: tree_sitter::Node, source_code: &str, path: &str) -> Result<String, ExtractionIssue> {
     let name_node = node.child_by_field_name("name").ok_or_else(||
         ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax{
             path: path.to_string(),
@@ -143,6 +193,31 @@ fn extract_name(node: tree_sitter::Node, source_code: &str, path: &str) -> Resul
         .utf8_text(source_code.as_bytes())
         .expect("source is &str, always valid UTF-8")
         .to_string())
+}
+
+fn extract_name_from_import(node: tree_sitter::Node, source_code: &str) -> Result<Vec<String>, ExtractionIssue> {
+    let mut cursor = node.walk();
+    let name_nodes: Vec<String> = node.children_by_field_name("name", &mut cursor)
+        .map(|n| n.utf8_text(source_code.as_bytes())
+            .expect("source is &str, always valid UTF-8")
+            .to_string())
+        .collect();
+    
+    let statement_name_node = node.child_by_field_name("module_name");
+
+    let statement_name = match statement_name_node {
+        Some(node) => node
+            .utf8_text(source_code.as_bytes())
+            .expect("source is &str, always valid UTF-8")
+            .to_string(),
+        None => "".to_string(),
+    };
+
+    Ok(name_nodes.iter().map(|n| if statement_name.is_empty() {
+        n.to_string()
+    } else {
+        format!("{}::{}", statement_name, n)
+    }).collect())
 }
 
 #[cfg(test)]
@@ -182,7 +257,7 @@ mod extract_tests {
         let tree = parse_code(source);
         let root = tree.root_node();
 
-        let result = extract_name(root, source, "test.py");
+        let result = extract_name_from_symbol(root, source, "test.py");
         assert_eq!(
             result.unwrap_err(),
             ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
@@ -244,18 +319,18 @@ def baz():
     return 1
 "#;
         let tree = parse_code(source);
-        let symbols = extractor(&tree, source, "test.py").unwrap();
+        let items = extractor(&tree, source, "test.py").unwrap();
 
-        assert_eq!(symbols.len(), 2);
+        assert_eq!(items.symbols.len(), 2);
 
-        assert_eq!(symbols[0].name, "Foo");
-        assert_eq!(symbols[0].kind, SymbolKind::Class);
-        assert_eq!(symbols[0].children_symbol.len(), 1);
-        assert_eq!(symbols[0].children_symbol[0].name, "bar");
-        assert_eq!(symbols[0].children_symbol[0].kind, SymbolKind::Method);
+        assert_eq!(items.symbols[0].name, "Foo");
+        assert_eq!(items.symbols[0].kind, SymbolKind::Class);
+        assert_eq!(items.symbols[0].children_symbol.len(), 1);
+        assert_eq!(items.symbols[0].children_symbol[0].name, "bar");
+        assert_eq!(items.symbols[0].children_symbol[0].kind, SymbolKind::Method);
 
-        assert_eq!(symbols[1].name, "baz");
-        assert_eq!(symbols[1].kind, SymbolKind::Function);
+        assert_eq!(items.symbols[1].name, "baz");
+        assert_eq!(items.symbols[1].kind, SymbolKind::Function);
     }
 
 }
@@ -277,12 +352,12 @@ mod visit_node_tests {
         let tree = parse_code(source);
         let class_node = get_first_child_of_kind(tree.root_node(), "class_definition");
 
-        let mut symbols = Vec::new();
-        visit_node(class_node, Scope::Module, source, &mut symbols, "test.py").unwrap();
+        let mut items = ExtractedItems { symbols: Vec::new(), relations: Vec::new() };
+        visit_node(class_node, Scope::Module, source, &mut items, "test.py").unwrap();
 
-        assert_eq!(symbols.len(), 1);
-        assert_eq!(symbols[0].name, "Foo");
-        assert_eq!(symbols[0].kind, SymbolKind::Class);
+        assert_eq!(items.symbols.len(), 1);
+        assert_eq!(items.symbols[0].name, "Foo");
+        assert_eq!(items.symbols[0].kind, SymbolKind::Class);
     }
 
     #[test]
@@ -303,12 +378,12 @@ mod visit_node_tests {
         let tree = parse_code(source);
         let func_node = get_first_child_of_kind(tree.root_node(), "function_definition");
 
-        let mut symbols = Vec::new();
-        visit_node(func_node, Scope::Module, source, &mut symbols, "test.py").unwrap();
+        let mut items = ExtractedItems { symbols: Vec::new(), relations: Vec::new() };
+        visit_node(func_node, Scope::Module, source, &mut items, "test.py").unwrap();
 
-        assert_eq!(symbols.len(), 1);
-        assert_eq!(symbols[0].name, "bar");
-        assert_eq!(symbols[0].kind, SymbolKind::Function);
+        assert_eq!(items.symbols.len(), 1);
+        assert_eq!(items.symbols[0].name, "bar");
+        assert_eq!(items.symbols[0].kind, SymbolKind::Function);
     }
 
     #[test]
@@ -328,14 +403,14 @@ mod visit_node_tests {
         let source = "def foo():\n    pass\n\nclass Bar:\n    pass\n";
         let tree = parse_code(source);
 
-        let mut symbols = Vec::new();
-        visit_node(tree.root_node(), Scope::Module, source, &mut symbols, "test.py").unwrap();
+        let mut items = ExtractedItems { symbols: Vec::new(), relations: Vec::new() };
+        visit_node(tree.root_node(), Scope::Module, source, &mut items, "test.py").unwrap();
 
-        assert_eq!(symbols.len(), 2);
-        assert_eq!(symbols[0].name, "foo");
-        assert_eq!(symbols[0].kind, SymbolKind::Function);
-        assert_eq!(symbols[1].name, "Bar");
-        assert_eq!(symbols[1].kind, SymbolKind::Class);
+        assert_eq!(items.symbols.len(), 2);
+        assert_eq!(items.symbols[0].name, "foo");
+        assert_eq!(items.symbols[0].kind, SymbolKind::Function);
+        assert_eq!(items.symbols[1].name, "Bar");
+        assert_eq!(items.symbols[1].kind, SymbolKind::Class);
     }
 
     #[test]
@@ -343,9 +418,9 @@ mod visit_node_tests {
         let source = "def foo():\n    pass\n";
         let tree = parse_code(source);
 
-        let mut symbols = Vec::new();
-        visit_node(tree.root_node(), Scope::Module, source, &mut symbols, "test.py").unwrap();
-        assert_eq!(symbols.len(), 1);
+        let mut items = ExtractedItems { symbols: Vec::new(), relations: Vec::new() };
+        visit_node(tree.root_node(), Scope::Module, source, &mut items, "test.py").unwrap();
+        assert_eq!(items.symbols.len(), 1);
 
         let result = extract_class(tree.root_node(), source, "test.py");
         assert!(result.is_err());
@@ -548,7 +623,7 @@ mod extract_name_tests {
         let source = "x = 1";
         let tree = parse_code(source);
 
-        let result = extract_name(tree.root_node(), source, "test.py");
+        let result = extract_name_from_symbol(tree.root_node(), source, "test.py");
         assert_eq!(
             result.unwrap_err(),
             ExtractionIssue::SourceCodeError(SourceCodeIssue::InvalidSyntax {
@@ -564,7 +639,7 @@ mod extract_name_tests {
         let tree = parse_code(source);
         let func_node = find_node_by_kind(tree.root_node(), "function_definition").unwrap();
 
-        assert_eq!(extract_name(func_node, source, "test.py").unwrap(), "foo");
+        assert_eq!(extract_name_from_symbol(func_node, source, "test.py").unwrap(), "foo");
     }
 }
 

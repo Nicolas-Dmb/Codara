@@ -1,5 +1,6 @@
 use crate::model::module::RawModule;
 use crate::model::warning::{AnalysisWarning,RetryableIssue,SourceCodeIssue};
+use crate::model::{RawSymbol, RawRelation};
 
 #[derive(Debug, Default, PartialEq)]
 pub struct AnalysisReport {
@@ -59,4 +60,10 @@ impl AnalysisReport {
         || self.has_retryables()
         || self.has_warnings()
     }
+}
+
+
+pub struct ExtractedItems{
+    pub symbols: Vec<RawSymbol>,
+    pub relations: Vec<RawRelation>,
 }

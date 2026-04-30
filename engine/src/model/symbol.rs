@@ -1,7 +1,6 @@
 use std::fmt;
-use crate::model::Module;
+use crate::model::{Module, RawRelation, ModuleId};
 
-use super::module::ModuleId;
 use super::run::RunId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -84,6 +83,7 @@ impl Symbol {
     }
 }
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawSymbolId(String);
 
@@ -111,6 +111,7 @@ pub struct RawSymbol {
     pub kind: SymbolKind,
     pub doc: String,
     pub children_symbol: Vec<RawSymbol>,
+    pub children_relation: Vec<RawRelation>,
     pub start_line: usize,
     pub end_line: usize,
 }
@@ -130,32 +131,25 @@ impl RawSymbol {
             kind,
             doc,
             children_symbol: Vec::new(),
+            children_relation: Vec::new(),
             start_line,
             end_line,
         }
     }
 
-    pub fn add_child(&mut self, child: RawSymbol) {
+    pub fn add_children_symbol(&mut self, child: RawSymbol) {
         self.children_symbol.push(child);
+    }
+
+    pub fn add_children_relation(&mut self, relation: RawRelation) {
+        self.children_relation.push(relation);
     }
 
     pub fn into_symbol(
         self,
         module: Module,
         run_id: RunId,
-        parent_symbol_id: Option<SymbolId>,
     ) -> (Symbol, Vec<RawSymbol>) {
-        let symbol = Symbol::new(
-            module.id.clone(),
-            run_id,
-            self.kind,
-            self.name,
-            self.doc,
-            module.relative_path,
-            parent_symbol_id,
-            self.start_line,
-            self.end_line,
-        );
-        (symbol, self.children_symbol)
+        unimplemented!()
     }
 }
