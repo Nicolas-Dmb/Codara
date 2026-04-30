@@ -139,7 +139,7 @@ pub struct RawRelation {
     pub id: RawRelationId,
     pub imported_name: String,
     pub source_path: String, /// Path of the file WHERE the import is declared (the origin of the relation),
-    pub target_symbol_id: Option<RawSymbolId>,
+    pub target_symbol_id: Option<RawSymbolId>, /// unimplemented for now
     pub kind: RelationKind,
     pub line: usize,
 }
@@ -170,12 +170,12 @@ impl RawRelation {
 
     pub fn into_relation(
         self,
-        module_id: ModuleId,
-        run_id: RunId,
+        module_id: &ModuleId,
+        run_id: &RunId,
     ) -> Relation {
         Relation::new(
-            module_id,
-            run_id,
+            module_id.clone(),
+            run_id.clone(),
             self.kind,
             self.imported_name,
             self.source_path,

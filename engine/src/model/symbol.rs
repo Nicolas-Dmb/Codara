@@ -1,5 +1,5 @@
 use std::fmt;
-use crate::model::{Module, RawRelation, ModuleId};
+use crate::model::{Module, ModuleId, RawRelation, Relation};
 
 use super::run::RunId;
 
@@ -50,7 +50,8 @@ pub struct Symbol {
     pub kind: SymbolKind,
     pub doc: String,
     pub location: String,
-    pub parent_symbol_id: Option<SymbolId>,
+    pub children_symbol: Vec<Symbol>,
+    pub children_relation: Vec<Relation>,
     pub start_line: usize,
     pub end_line: usize,
 }
@@ -63,7 +64,8 @@ impl Symbol {
         name: String,
         doc: String,
         location: String,
-        parent_symbol_id: Option<SymbolId>,
+        children_symbol: Vec<Symbol>,
+        children_relation: Vec<Relation>,
         start_line: usize,
         end_line: usize,
     ) -> Self {
@@ -76,7 +78,8 @@ impl Symbol {
             kind,
             doc,
             location,
-            parent_symbol_id,
+            children_symbol,
+            children_relation,
             start_line,
             end_line,
         }
@@ -110,6 +113,7 @@ pub struct RawSymbol {
     pub name: String,
     pub kind: SymbolKind,
     pub doc: String,
+    pub location: String,
     pub children_symbol: Vec<RawSymbol>,
     pub children_relation: Vec<RawRelation>,
     pub start_line: usize,
@@ -121,6 +125,7 @@ impl RawSymbol {
         name: String,
         kind: SymbolKind,
         doc: String,
+        location: String,
         start_line: usize,
         end_line: usize,
     ) -> Self {
@@ -130,6 +135,7 @@ impl RawSymbol {
             name,
             kind,
             doc,
+            location,
             children_symbol: Vec::new(),
             children_relation: Vec::new(),
             start_line,
@@ -147,9 +153,20 @@ impl RawSymbol {
 
     pub fn into_symbol(
         self,
-        module: Module,
-        run_id: RunId,
-    ) -> (Symbol, Vec<RawSymbol>) {
-        unimplemented!()
+        module_id: &ModuleId,
+        run_id: &RunId,
+    ) -> Symbol {
+        Symbol::new(
+            module_id.clone(),
+            run_id.clone(),
+            self.kind,
+            self.name,
+            self.doc,
+            self.location,
+            self.children_symbol.into_iter().map(|s| s.into_symbol(module_id, run_id)).collect(),
+            self.children_relation.into_iter().map(|r| r.into_relation(module_id, run_id)).collect(),
+            self.start_line,
+            self.end_line,
+        )
     }
 }

@@ -92,6 +92,7 @@ fn extract_class(node: tree_sitter::Node, source_code: &str, path: &str)-> Resul
         class_name,
         SymbolKind::Class,
         class_doc,
+        path.to_string(),
         node.start_position().row + 1,
         node.end_position().row + 1,
     );
@@ -113,6 +114,7 @@ fn extract_function(node: tree_sitter::Node, scope:Scope, source_code: &str, pat
         function_name,
         kind,
         function_doc,
+        path.to_string(),
         node.start_position().row + 1,
         node.end_position().row + 1,
     );
