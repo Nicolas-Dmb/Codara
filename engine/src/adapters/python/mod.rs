@@ -1,6 +1,6 @@
 use std::fmt;
 use crate::analysis::connector::Adapter;
-use crate::model::{AnalysisWarning, ExtractionIssue, RawModule, RawSymbol, RelationKind, SymbolKind, SourceCodeIssue, RawRelation, ExtractedItems};
+use crate::model::{AnalysisWarning, ExtractionIssue, RawModule, RawSymbol, RelationKind, SymbolKind, SourceCodeIssue, RawRelation, ExtractedItems, RetryableIssue};
 mod parser;
     use parser::parse_code;
 pub struct PythonAdapter {}
