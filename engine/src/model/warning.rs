@@ -6,6 +6,8 @@ pub enum ExtractionIssue {
     Warning(AnalysisWarning),
     #[error("retryable issue: {0}")]
     Retryable(RetryableIssue),
+    #[error("source code error: {0}")]
+    SourceCodeError(SourceCodeIssue),
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -55,5 +57,14 @@ pub enum AnalysisWarning {
     UnsupportedRelationKind {
         path: String,
         kind: String,
+    },
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum SourceCodeIssue {
+    #[error("invalid syntax in {path}: {reason}")]
+    InvalidSyntax {
+        path: String,
+        reason: String,
     },
 }

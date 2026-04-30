@@ -1,4 +1,6 @@
 use std::fmt;
+use crate::model::Module;
+
 use super::module::ModuleId;
 use super::run::RunId;
 
@@ -6,7 +8,7 @@ use super::run::RunId;
 pub struct SymbolId(String);
 
 impl SymbolId {
-    pub fn new(module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: u32) -> Self {
+    pub fn new(module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: usize) -> Self {
         Self(format!(
             "{}::{}::{}::{}",
             module_id,
@@ -50,8 +52,8 @@ pub struct Symbol {
     pub doc: String,
     pub location: String,
     pub parent_symbol_id: Option<SymbolId>,
-    pub start_line: u32,
-    pub end_line: u32,
+    pub start_line: usize,
+    pub end_line: usize,
 }
 
 impl Symbol {
@@ -63,8 +65,8 @@ impl Symbol {
         doc: String,
         location: String,
         parent_symbol_id: Option<SymbolId>,
-        start_line: u32,
-        end_line: u32,
+        start_line: usize,
+        end_line: usize,
     ) -> Self {
         let id = SymbolId::new(&module_id, &kind, &name, start_line);
         Self {
@@ -86,7 +88,7 @@ impl Symbol {
 pub struct RawSymbolId(String);
 
 impl RawSymbolId {
-    pub fn new(kind: &SymbolKind, name: &str, start_line: u32) -> Self {
+    pub fn new(kind: &SymbolKind, name: &str, start_line: usize) -> Self {
         Self(format!(
             "{}::{}::{}",
             kind,
@@ -108,10 +110,9 @@ pub struct RawSymbol {
     pub name: String,
     pub kind: SymbolKind,
     pub doc: String,
-    pub location: String,
     pub children_symbol: Vec<RawSymbol>,
-    pub start_line: u32,
-    pub end_line: u32,
+    pub start_line: usize,
+    pub end_line: usize,
 }
 
 impl RawSymbol {
@@ -119,9 +120,8 @@ impl RawSymbol {
         name: String,
         kind: SymbolKind,
         doc: String,
-        location: String,
-        start_line: u32,
-        end_line: u32,
+        start_line: usize,
+        end_line: usize,
     ) -> Self {
         let id = RawSymbolId::new(&kind, &name, start_line);
         Self {
@@ -129,7 +129,6 @@ impl RawSymbol {
             name,
             kind,
             doc,
-            location,
             children_symbol: Vec::new(),
             start_line,
             end_line,
@@ -142,17 +141,17 @@ impl RawSymbol {
 
     pub fn into_symbol(
         self,
-        module_id: ModuleId,
+        module: Module,
         run_id: RunId,
         parent_symbol_id: Option<SymbolId>,
     ) -> (Symbol, Vec<RawSymbol>) {
         let symbol = Symbol::new(
-            module_id,
+            module.id.clone(),
             run_id,
             self.kind,
             self.name,
             self.doc,
-            self.location,
+            module.relative_path,
             parent_symbol_id,
             self.start_line,
             self.end_line,

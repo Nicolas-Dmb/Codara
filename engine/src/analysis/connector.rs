@@ -1,5 +1,5 @@
 use crate::adapters::default_adapters;
-use crate::model::{AnalysisWarning, RawModule, ExtractionIssue};
+use crate::model::{AnalysisWarning, RawModule, ExtractionIssue,RetryableIssue};
 
 pub trait AdapterRegistryTrait {
     fn find_and_extract(&self, url: &str) -> Result<RawModule, ExtractionIssue>;
@@ -48,6 +48,17 @@ pub trait Adapter {
     }
 
     fn extract(&self, url: &str) -> Result<RawModule, ExtractionIssue>;
+
+    fn read_source_code(&self, url: &str) -> Result<String, ExtractionIssue> {
+        let source_code = std::fs::read_to_string(url).map_err(|err| {
+            ExtractionIssue::Retryable(RetryableIssue::UnreadableFile {
+                    path: url.to_string(),
+                    reason: err.to_string(),
+                })
+            }
+        )?;
+        Ok(source_code)
+    }
 }
 
 #[cfg(test)]
