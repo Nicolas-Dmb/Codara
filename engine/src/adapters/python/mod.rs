@@ -6,6 +6,13 @@ mod symbol_extractor;
 use crate::adapters::python::symbol_extractor::{extract_name_from_symbol};
 mod module_extractor;
 use crate::adapters::python::module_extractor::extractor;
+
+/// Python adapter for `.py` files.                                                                                                          
+///                                                                                                                                         
+/// Supported SymbolKinds: Class, Function, Method                                                                                           
+/// Supported RelationKinds: Import                                                                                                          
+/// Ignored files: `__init__.py`   
+
 pub struct PythonAdapter {}
 
 impl Adapter for PythonAdapter {
