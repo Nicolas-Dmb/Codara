@@ -1,8 +1,8 @@
 use crate::model;
 use model::run::Run;
+use crate::services::Context;
 
-
-pub fn initializer(run: &Run) {
+pub fn initializer(context: Context, run: &Run) {
     // request project data 
     // init run as Running
     // clone projet un codebase 
