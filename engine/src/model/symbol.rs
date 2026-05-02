@@ -1,12 +1,13 @@
 use std::fmt;
-use super::module::ModuleId;
+use crate::model::{Module, ModuleId, RawRelation, Relation};
+
 use super::run::RunId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SymbolId(String);
 
 impl SymbolId {
-    pub fn new(module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: u32) -> Self {
+    pub fn new(module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: usize) -> Self {
         Self(format!(
             "{}::{}::{}::{}",
             module_id,
@@ -49,9 +50,10 @@ pub struct Symbol {
     pub kind: SymbolKind,
     pub doc: String,
     pub location: String,
-    pub parent_symbol_id: Option<SymbolId>,
-    pub start_line: u32,
-    pub end_line: u32,
+    pub children_symbol: Vec<Symbol>,
+    pub children_relation: Vec<Relation>,
+    pub start_line: usize,
+    pub end_line: usize,
 }
 
 impl Symbol {
@@ -62,9 +64,10 @@ impl Symbol {
         name: String,
         doc: String,
         location: String,
-        parent_symbol_id: Option<SymbolId>,
-        start_line: u32,
-        end_line: u32,
+        children_symbol: Vec<Symbol>,
+        children_relation: Vec<Relation>,
+        start_line: usize,
+        end_line: usize,
     ) -> Self {
         let id = SymbolId::new(&module_id, &kind, &name, start_line);
         Self {
@@ -75,18 +78,20 @@ impl Symbol {
             kind,
             doc,
             location,
-            parent_symbol_id,
+            children_symbol,
+            children_relation,
             start_line,
             end_line,
         }
     }
 }
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawSymbolId(String);
 
 impl RawSymbolId {
-    pub fn new(kind: &SymbolKind, name: &str, start_line: u32) -> Self {
+    pub fn new(kind: &SymbolKind, name: &str, start_line: usize) -> Self {
         Self(format!(
             "{}::{}::{}",
             kind,
@@ -110,8 +115,9 @@ pub struct RawSymbol {
     pub doc: String,
     pub location: String,
     pub children_symbol: Vec<RawSymbol>,
-    pub start_line: u32,
-    pub end_line: u32,
+    pub children_relation: Vec<RawRelation>,
+    pub start_line: usize,
+    pub end_line: usize,
 }
 
 impl RawSymbol {
@@ -120,8 +126,8 @@ impl RawSymbol {
         kind: SymbolKind,
         doc: String,
         location: String,
-        start_line: u32,
-        end_line: u32,
+        start_line: usize,
+        end_line: usize,
     ) -> Self {
         let id = RawSymbolId::new(&kind, &name, start_line);
         Self {
@@ -131,32 +137,36 @@ impl RawSymbol {
             doc,
             location,
             children_symbol: Vec::new(),
+            children_relation: Vec::new(),
             start_line,
             end_line,
         }
     }
 
-    pub fn add_child(&mut self, child: RawSymbol) {
+    pub fn add_children_symbol(&mut self, child: RawSymbol) {
         self.children_symbol.push(child);
+    }
+
+    pub fn add_children_relation(&mut self, relation: RawRelation) {
+        self.children_relation.push(relation);
     }
 
     pub fn into_symbol(
         self,
-        module_id: ModuleId,
-        run_id: RunId,
-        parent_symbol_id: Option<SymbolId>,
-    ) -> (Symbol, Vec<RawSymbol>) {
-        let symbol = Symbol::new(
-            module_id,
-            run_id,
+        module_id: &ModuleId,
+        run_id: &RunId,
+    ) -> Symbol {
+        Symbol::new(
+            module_id.clone(),
+            run_id.clone(),
             self.kind,
             self.name,
             self.doc,
             self.location,
-            parent_symbol_id,
+            self.children_symbol.into_iter().map(|s| s.into_symbol(module_id, run_id)).collect(),
+            self.children_relation.into_iter().map(|r| r.into_relation(module_id, run_id)).collect(),
             self.start_line,
             self.end_line,
-        );
-        (symbol, self.children_symbol)
+        )
     }
 }

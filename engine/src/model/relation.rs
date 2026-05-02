@@ -12,7 +12,7 @@ impl RelationId {
         kind: &RelationKind,
         imported_name: &str,
         source_path: &str,
-        line: u32,
+        line: usize,
     ) -> Self {
         Self(format!(
             "{}::{}::{}::{}::{}",
@@ -53,7 +53,7 @@ pub struct Relation {
     pub source_path: String,
     pub target_symbol_id: Option<SymbolId>,
     pub kind: RelationKind,
-    pub line: u32,
+    pub line: usize,
 }
 
 impl Relation {
@@ -64,7 +64,7 @@ impl Relation {
         imported_name: String,
         source_path: String,
         target_symbol_id: Option<SymbolId>,
-        line: u32,
+        line: usize,
     ) -> Self {
         let id = RelationId::new(
             &module_id,
@@ -94,7 +94,7 @@ impl RawRelationId {
         kind: &RelationKind,
         imported_name: &str,
         source_path: &str,
-        line: u32,
+        line: usize,
     ) -> Self {
         Self(format!(
             "{}::{}::{}::{}",
@@ -138,10 +138,10 @@ impl fmt::Display for RawSymbolRelationId {
 pub struct RawRelation {
     pub id: RawRelationId,
     pub imported_name: String,
-    pub source_path: String,
-    pub target_symbol_id: Option<RawSymbolId>,
+    pub source_path: String, /// Path of the file WHERE the import is declared (the origin of the relation),
+    pub target_symbol_id: Option<RawSymbolId>, /// unimplemented for now
     pub kind: RelationKind,
-    pub line: u32,
+    pub line: usize,
 }
 
 impl RawRelation {
@@ -150,7 +150,7 @@ impl RawRelation {
         imported_name: String,
         source_path: String,
         target_symbol_id: Option<RawSymbolId>,
-        line: u32,
+        line: usize,
     ) -> Self {
         let id = RawRelationId::new(
             &kind,
@@ -170,12 +170,12 @@ impl RawRelation {
 
     pub fn into_relation(
         self,
-        module_id: ModuleId,
-        run_id: RunId,
+        module_id: &ModuleId,
+        run_id: &RunId,
     ) -> Relation {
         Relation::new(
-            module_id,
-            run_id,
+            module_id.clone(),
+            run_id.clone(),
             self.kind,
             self.imported_name,
             self.source_path,

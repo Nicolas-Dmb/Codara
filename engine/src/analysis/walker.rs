@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs;
 use crate::analysis::connector;
-use crate::model::{Project, Run, RunError, RetryableIssue, AnalysisReport};
+use crate::model::{Project, Run, RunError, RetryableIssue, AnalysisReport, ExtractionIssue};
 
 fn read_directory(
     path: &Path,
@@ -60,9 +60,23 @@ pub fn walk(
 
         if entry_path.is_file() {
             let result = adapters_registry.find_and_extract(&entry_path.to_string_lossy().to_string());
+
             match result {
-                Ok(raw_module) => report.add_module(raw_module),
-                Err(warning) => report.add_warning(warning),
+                Ok(raw_module) => {
+                    report.add_module(raw_module);
+                }
+
+                Err(ExtractionIssue::Warning(warning)) => {
+                    report.add_warning(warning);
+                }
+
+                Err(ExtractionIssue::Retryable(retryable)) => {
+                    report.add_retryable(retryable);
+                }
+
+                Err(ExtractionIssue::SourceCodeError(issue)) => {
+                    report.add_source_code_issue(issue);
+                }
             }
             continue;
         }
@@ -94,11 +108,11 @@ mod walker_tests {
         fn find_and_extract(
             &self,
             url: &str,
-        ) -> Result<RawModule, AnalysisWarning> {
-            if (url.ends_with(".py")) {
-                Ok(RawModule::new(url.to_string(), Path::new(url).file_name().and_then(|name| name.to_str()).unwrap_or("").to_string()))
+        ) -> Result<RawModule, ExtractionIssue> {
+            if url.ends_with(".py") {
+                Ok(RawModule::new(url.to_string()))
             } else {
-                Err(AnalysisWarning::UnsupportedFileType{path:url.to_string()})
+                Err(ExtractionIssue::Warning(AnalysisWarning::UnsupportedFileType{path:url.to_string()}))
             }
         }
     }
