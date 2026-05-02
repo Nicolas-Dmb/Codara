@@ -134,7 +134,7 @@ impl fmt::Display for RawSymbolRelationId {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RawRelation {
     pub id: RawRelationId,
     pub imported_name: String,

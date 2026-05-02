@@ -167,9 +167,9 @@ def baz():
         let class = &module.symbols[0];
         assert_eq!(class.name, "Foo");
         assert_eq!(class.kind, SymbolKind::Class);
-        assert_eq!(class.children_symbol.len(), 1);
+        assert_eq!(class.children_symbols.len(), 1);
 
-        let method = &class.children_symbol[0];
+        let method = &class.children_symbols[0];
         assert_eq!(method.name, "bar");
         assert_eq!(method.kind, SymbolKind::Method);
 

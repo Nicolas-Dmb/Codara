@@ -97,10 +97,10 @@ impl RawModule {
 
     pub fn into_parts(
         self,
-        project_id: ProjectId,
-        run_id: RunId,
+        project_id: &ProjectId,
+        run_id: &RunId,
     ) -> (Module, Vec<RawSymbol>, Vec<RawRelation>) {
-        let module = Module::new(project_id, run_id, self.relative_path);
+        let module = Module::new(project_id.clone(), run_id.clone(), self.relative_path);
         (module, self.symbols, self.relations)
     }
 }

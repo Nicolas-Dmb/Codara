@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs;
 use crate::analysis::connector;
-use crate::model::{Project, Run, RunError, RetryableIssue, AnalysisReport, ExtractionIssue};
+use crate::model::{Run, RunError, RetryableIssue, AnalysisReport, ExtractionIssue};
 
 fn read_directory(
     path: &Path,
@@ -29,8 +29,6 @@ fn read_directory(
 
 
 pub fn walk(
-    run: &Run,
-    project: &Project,
     path: &Path,
     is_root: bool,
     adapters_registry: &dyn connector::AdapterRegistryTrait,
@@ -82,7 +80,7 @@ pub fn walk(
         }
 
         if entry_path.is_dir() {
-            let child_report = walk(run, project, &entry_path, false, adapters_registry)?;
+            let child_report = walk( &entry_path, false, adapters_registry)?;
             report.merge(child_report);
         }
     }
@@ -117,20 +115,12 @@ mod walker_tests {
         }
     }
 
-    fn setup() -> (Project, Run) {
-        let project = Project::new("https://github.com/test/repo.git".to_string()).unwrap();
-        let run = Run::new(project.id.clone(), "main".to_string(), "commit123".to_string());
-
-        (project, run)
-    }
-
     #[test]
     fn test_with_empty_directory() {
         let temp_dir = tempdir().unwrap();
-        let (project, run) = setup();
 
         assert_eq!(
-            walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry),
+            walk(temp_dir.path(), true, &FakeAdapterRegistry),
             Err(RunError::EmptyRepository)
         );
     }
@@ -143,8 +133,7 @@ mod walker_tests {
         fs::create_dir(&subdir).unwrap();
         fs::set_permissions(&subdir, fs::Permissions::from_mode(0o000)).unwrap();
 
-        let (project, run) = setup();
-        let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
+        let result = walk(temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
 
         assert_eq!(result.retryables.len(), 1);
         assert_eq!(result.warnings.len(), 0);
@@ -164,10 +153,8 @@ mod walker_tests {
         let temp_dir = tempdir().unwrap();
         fs::set_permissions(temp_dir.path(), fs::Permissions::from_mode(0o000)).unwrap();
 
-        let (project, run) = setup();
-
         assert!(matches!(
-            walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry),
+            walk(temp_dir.path(), true, &FakeAdapterRegistry),
             Err(RunError::ReadRepositoryFailed(_))
         ));
 
@@ -186,10 +173,8 @@ mod walker_tests {
         let file2 = subdir.join("file2.py");
         fs::write(&file2, "content2").unwrap();
 
-        let (project, run) = setup();
 
-
-        let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
+        let result = walk(temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
 
         assert_eq!(result.warnings.len(), 0);
         assert_eq!(result.retryables.len(), 0);
@@ -205,9 +190,7 @@ mod walker_tests {
 
         fs::write(temp_dir.path().join("file1.txt"), "content1").unwrap();
 
-        let (project, run) = setup();
-
-        let result = walk(&run, &project, temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
+        let result = walk( temp_dir.path(), true, &FakeAdapterRegistry).unwrap();
 
         assert_eq!(result.warnings.len(), 1);
         assert_eq!(result.retryables.len(), 0);

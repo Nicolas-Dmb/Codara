@@ -162,9 +162,9 @@ mod extract_class_tests {
         assert_eq!(symbol.doc, "\"\"\"Foo doc\"\"\"");
         assert_eq!(symbol.start_line, 1);
         assert_eq!(symbol.end_line, 4);
-        assert_eq!(symbol.children_symbol.len(), 1);
-        assert_eq!(symbol.children_symbol[0].name, "bar");
-        assert_eq!(symbol.children_symbol[0].kind, SymbolKind::Method);
+        assert_eq!(symbol.children_symbols.len(), 1);
+        assert_eq!(symbol.children_symbols[0].name, "bar");
+        assert_eq!(symbol.children_symbols[0].kind, SymbolKind::Method);
     }
 }
 
