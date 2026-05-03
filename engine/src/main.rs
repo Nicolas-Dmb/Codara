@@ -3,12 +3,13 @@ mod services;
 mod model;
 mod analysis;
 mod adapters;
+mod persistence;
 
 #[tokio::main]
 async fn main(){
     let cfg = config::load_env::load_env();
-    let db = services::SqlxDb::init_db(&cfg.database_url)
+    let pool = services::db::init_pool(&cfg.database_url)
         .await.expect("Failed to initialize database connection pool");
-    let context = services::Context::new(Box::new(db));
-    
+    let analysis_repo = persistence::SqlxAnalysisRepository::new(pool);
+    let context = services::Context::new(analysis_repo);
 }

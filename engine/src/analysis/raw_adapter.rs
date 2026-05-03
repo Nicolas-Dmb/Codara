@@ -1,21 +1,23 @@
-use crate::model::{AnalysisReport, Module, ModuleId, ProjectId, RawModule, RawSymbol, Relation, RunError, RunId, Symbol, relation, RawRelation};
+use crate::model::{AnalysisReport, Module, ModuleId, ProjectId, RawModule, RawSymbol, Relation, RunId, Symbol, RawRelation, ServiceError};
+use crate::persistence::AnalysisRepository;
 use crate::services::Context;
 
-pub struct RawAdapter {
-    context: Context,
+pub struct RawAdapter<R: AnalysisRepository> {
+    context: Context<R>,
     project_id: ProjectId,
     run_id: RunId,
 }
 
-impl RawAdapter {
-    pub fn new(context: Context, project_id: ProjectId, run_id: RunId) -> Self {
+impl<R: AnalysisRepository> RawAdapter<R> {
+    pub fn new(context: Context<R>, project_id: ProjectId, run_id: RunId) -> Self {
         Self { context, project_id, run_id }
     }
 
 
-    pub fn convert_and_store(&self, analysis: AnalysisReport) -> () {
-        let (module, symbol, relation) = self.convert_module_and_children(analysis.raw_modules);
-        
+    pub async fn convert_and_store(&self, analysis: AnalysisReport) -> Result<(), ServiceError> {
+        let (modules, symbols, relations) = self.convert_module_and_children(analysis.raw_modules);
+        self.context.analysis_repo.store_batch(&modules, &symbols, &relations).await?;
+        Ok(())
     }
 
     fn convert_module_and_children(&self, raw_modules: Vec<RawModule>) -> (Vec<Module>, Vec<Symbol>, Vec<Relation>) {

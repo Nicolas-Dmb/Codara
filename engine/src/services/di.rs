@@ -1,11 +1,11 @@
-use crate::services::db::Db;
+use crate::persistence::AnalysisRepository;
 
-pub struct Context{
-    pub db: Box<dyn Db>,
+pub struct Context<R: AnalysisRepository> {
+    pub analysis_repo: R,
 }
 
-impl Context {
-    pub fn new(db : Box<dyn Db>) -> Self {
-        Self { db }
+impl<R: AnalysisRepository> Context<R> {
+    pub fn new(analysis_repo: R) -> Self {
+        Self { analysis_repo }
     }
 }
