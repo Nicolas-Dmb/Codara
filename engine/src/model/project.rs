@@ -21,6 +21,7 @@ pub struct Project {
     pub id: ProjectId,
     pub name: String,
     pub repo_url: String,
+    pub branch: String,
 }
 
 impl Project {
@@ -46,7 +47,7 @@ impl Project {
         Ok((namespace, name))
     }
 
-    pub fn new(repo_url: String) -> Result<Self, ProjectError> {
+    pub fn new(repo_url: String, branch: String) -> Result<Self, ProjectError> {
         let (namespace, name) = Self::split_repo_url(&repo_url)?;
 
         let id = ProjectId::new(namespace, name.clone());
@@ -55,6 +56,7 @@ impl Project {
             id,
             name,
             repo_url,
+            branch,
         })
     }
 }

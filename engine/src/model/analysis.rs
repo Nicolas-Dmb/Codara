@@ -47,10 +47,6 @@ impl AnalysisReport {
         !self.warnings.is_empty()
     }
 
-    pub fn is_clean(&self) -> bool {
-        self.retryables.is_empty() && self.warnings.is_empty()
-    }
-
     pub fn add_module(&mut self, raw_module: RawModule) {
         self.raw_modules.push(raw_module);
     }
