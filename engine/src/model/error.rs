@@ -19,3 +19,14 @@ pub enum RunError {
     #[error("clone failed: {0}")]
     CloneFailed(String),
 }
+
+
+#[derive(Debug, Error, PartialEq)]
+pub enum ServiceError {
+    #[error("failed to initialize database connection pool")]
+    DatabaseInitializationFailed,
+    #[error("database request failed: {0}")]
+    DatabaseRequestFailed(String),
+    #[error("migration failed: {0}")]
+    MigrationFailed(String),
+}

@@ -70,9 +70,9 @@ def baz():
 
         assert_eq!(items.symbols[0].name, "Foo");
         assert_eq!(items.symbols[0].kind, SymbolKind::Class);
-        assert_eq!(items.symbols[0].children_symbol.len(), 1);
-        assert_eq!(items.symbols[0].children_symbol[0].name, "bar");
-        assert_eq!(items.symbols[0].children_symbol[0].kind, SymbolKind::Method);
+        assert_eq!(items.symbols[0].children_symbols.len(), 1);
+        assert_eq!(items.symbols[0].children_symbols[0].name, "bar");
+        assert_eq!(items.symbols[0].children_symbols[0].kind, SymbolKind::Method);
 
         assert_eq!(items.symbols[1].name, "baz");
         assert_eq!(items.symbols[1].kind, SymbolKind::Function);

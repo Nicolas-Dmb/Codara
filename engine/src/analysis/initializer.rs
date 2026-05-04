@@ -1,8 +1,9 @@
 use crate::model;
 use model::run::Run;
+use crate::persistence::AnalysisRepository;
+use crate::services::Context;
 
-
-pub fn initializer(run: &Run) {
+pub fn initializer<R: AnalysisRepository>(context: Context<R>, run: &Run) {
     // request project data 
     // init run as Running
     // clone projet un codebase 
