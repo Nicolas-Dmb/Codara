@@ -6,7 +6,7 @@ use crate::analysis;
 use std::process::Command;
 use tempfile::TempDir;
 
-pub async fn initializer<A: AnalysisRepository, R: RunRepository>(context: Context<A, R>, run: Run, project: Project) {
+pub async fn run_analysis<A: AnalysisRepository, R: RunRepository>(context: Context<A, R>, run: Run, project: Project) {
     let Context { analysis_repo, run_repo } = context;
     let run_id = run.id.clone();
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
