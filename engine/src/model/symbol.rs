@@ -46,12 +46,11 @@ pub struct Symbol {
     pub id: SymbolId,
     pub run_id: RunId,
     pub module_id: ModuleId,
+    pub parent_symbol_id: Option<SymbolId>,
     pub name: String,
     pub kind: SymbolKind,
     pub doc: String,
     pub location: String,
-    pub children_symbol: Vec<SymbolId>,
-    pub children_relation: Vec<RelationId>,
     pub start_line: usize,
     pub end_line: usize,
 }
@@ -60,12 +59,11 @@ impl Symbol {
     pub fn new(
         module_id: &ModuleId,
         run_id: &RunId,
+        parent_symbol_id: Option<&SymbolId>,
         kind: SymbolKind,
         name: String,
         doc: String,
         location: String,
-        children_symbol: Vec<SymbolId>,
-        children_relation: Vec<RelationId>,
         start_line: usize,
         end_line: usize,
     ) -> Self {
@@ -74,12 +72,11 @@ impl Symbol {
             id,
             run_id: run_id.clone(),
             module_id: module_id.clone(),
+            parent_symbol_id: parent_symbol_id.cloned(),
             name,
             kind,
             doc,
             location,
-            children_symbol,
-            children_relation,
             start_line,
             end_line,
         }
@@ -155,23 +152,17 @@ impl RawSymbol {
         self,
         module_id: &ModuleId,
         run_id: &RunId,
+        parent_symbol_id: Option<&SymbolId>,
     ) -> (Symbol, Vec<RawSymbol>, Vec<RawRelation>) {
-        let children_symbol_ids: Vec<SymbolId> = self.children_symbols.iter()
-            .map(|s| SymbolId::new(module_id, &s.kind, &s.name, s.start_line))
-            .collect();
-        let children_relation_ids: Vec<RelationId> = self.children_relations.iter()
-            .map(|r| RelationId::new(module_id, &r.kind, &r.imported_name, &r.source_path, r.line))
-            .collect();
 
         let symbol = Symbol::new(
             module_id,
             run_id,
+            parent_symbol_id,
             self.kind,
             self.name,
             self.doc,
             self.location,
-            children_symbol_ids,
-            children_relation_ids,
             self.start_line,
             self.end_line,
         );

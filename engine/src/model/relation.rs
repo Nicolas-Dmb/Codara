@@ -49,6 +49,7 @@ pub struct Relation {
     pub id: RelationId,
     pub run_id: RunId,
     pub module_id: ModuleId,
+    pub parent_symbol_id: Option<SymbolId>,
     pub imported_name: String,
     pub source_path: String,
     pub target_symbol_id: Option<SymbolId>,
@@ -60,6 +61,7 @@ impl Relation {
     pub fn new(
         module_id: ModuleId,
         run_id: RunId,
+        parent_symbol_id: Option<SymbolId>,
         kind: RelationKind,
         imported_name: String,
         source_path: String,
@@ -77,6 +79,7 @@ impl Relation {
             id,
             run_id,
             module_id,
+            parent_symbol_id: parent_symbol_id,
             imported_name,
             source_path,
             target_symbol_id,
@@ -172,10 +175,12 @@ impl RawRelation {
         self,
         module_id: &ModuleId,
         run_id: &RunId,
+        parent_symbol_id: Option<&SymbolId>,
     ) -> Relation {
         Relation::new(
             module_id.clone(),
             run_id.clone(),
+            parent_symbol_id.cloned(),
             self.kind,
             self.imported_name,
             self.source_path,

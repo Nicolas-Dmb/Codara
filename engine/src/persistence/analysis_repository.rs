@@ -44,11 +44,12 @@ impl SqlxAnalysisRepository {
     ) -> Result<(), ServiceError> {
         for symbol in symbols {
             sqlx::query(
-                "INSERT INTO symbols (id, module_id, run_id, name, kind, doc, location, start_line, end_line) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                "INSERT INTO symbols (id, module_id, run_id, parent_symbol_id, name, kind, doc, location, start_line, end_line) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
             )
             .bind(symbol.id.to_string())
             .bind(symbol.module_id.to_string())
             .bind(symbol.run_id.to_string())
+            .bind(symbol.parent_symbol_id.as_ref().map(|id| id.to_string()))
             .bind(&symbol.name)
             .bind(symbol.kind.to_string())
             .bind(&symbol.doc)
@@ -68,11 +69,12 @@ impl SqlxAnalysisRepository {
     ) -> Result<(), ServiceError> {
         for relation in relations {
             sqlx::query(
-                "INSERT INTO relations (id, module_id, run_id, imported_name, source_path, target_symbol_id, kind, line) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                "INSERT INTO relations (id, module_id, run_id, parent_symbol_id, imported_name, source_path, target_symbol_id, kind, line) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
             )
             .bind(relation.id.to_string())
             .bind(relation.module_id.to_string())
             .bind(relation.run_id.to_string())
+            .bind(relation.parent_symbol_id.as_ref().map(|id| id.to_string()))
             .bind(&relation.imported_name)
             .bind(&relation.source_path)
             .bind(relation.target_symbol_id.as_ref().map(|id| id.to_string()))
