@@ -20,10 +20,22 @@ impl fmt::Display for RunId {
 #[derive(Debug, PartialEq, Eq)]
 pub enum RunStatus {
     Pending,
-    Running,
-    Success,
+    Processing,
+    Done,
     Failed,
     PartialSuccess,
+}
+
+impl fmt::Display for RunStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RunStatus::Pending => f.write_str("pending"),
+            RunStatus::Processing => f.write_str("processing"),
+            RunStatus::Done => f.write_str("done"),
+            RunStatus::Failed => f.write_str("failed"),
+            RunStatus::PartialSuccess => f.write_str("partial_success"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -52,12 +64,12 @@ impl Run {
     }
 
     pub fn start(&mut self) {
-        self.status = RunStatus::Running;
+        self.status = RunStatus::Processing;
         self.started_at = Some(Utc::now());
     }
 
     pub fn succeed(&mut self) {
-        self.status = RunStatus::Success;
+        self.status = RunStatus::Done;
         self.finished_at = Some(Utc::now());
     }
 
@@ -69,7 +81,7 @@ impl Run {
 
     /// Use this when the run completes with retryable issues
     /// It will used when implementing the "retry" feature. 
-    pub fn partial_success(&mut self, error: String) {
+    pub fn partial_success(&mut self) {
         self.status = RunStatus::PartialSuccess;
         self.finished_at = Some(Utc::now());
     }

@@ -1,21 +1,20 @@
 use crate::model::{AnalysisReport, Module, ModuleId, ProjectId, RawModule, RawSymbol, Relation, RunId, Symbol, RawRelation, ServiceError, SymbolId};
-use crate::persistence::AnalysisRepository;
-use crate::services::Context;
+use crate::persistence::{AnalysisRepository};
 
-pub struct RawAdapter<R: AnalysisRepository> {
-    context: Context<R>,
+pub struct RawAdapter<A: AnalysisRepository> {
+    analysis_repo: A,
     project_id: ProjectId,
     run_id: RunId,
 }
 
-impl<R: AnalysisRepository> RawAdapter<R> {
-    pub fn new(context: Context<R>, project_id: ProjectId, run_id: RunId) -> Self {
-        Self { context, project_id, run_id }
+impl<A: AnalysisRepository> RawAdapter<A> {
+    pub fn new(analysis_repo: A, project_id: ProjectId, run_id: RunId) -> Self {
+        Self { analysis_repo, project_id, run_id }
     }
 
     pub async fn convert_and_store(&self, analysis: AnalysisReport) -> Result<(), ServiceError> {
         let (modules, symbols, relations) = self.convert_module_and_children(analysis.raw_modules);
-        self.context.analysis_repo.store_batch(&self.run_id.to_string(), &modules, &symbols, &relations, &analysis.warnings, &analysis.retryables, &analysis.source_code_issues).await?;
+        self.analysis_repo.store_batch(&self.run_id.to_string(), &modules, &symbols, &relations, &analysis.warnings, &analysis.retryables, &analysis.source_code_issues).await?;
         Ok(())
     }
 
@@ -104,8 +103,8 @@ mod tests {
     fn make_adapter() -> RawAdapter<FakeAnalysisRepository> {
         let project_id = test_project_id();
         let run_id = test_run_id(&project_id);
-        let context = Context::new(FakeAnalysisRepository::new());
-        RawAdapter::new(context, project_id, run_id)
+        let analysis_repo = FakeAnalysisRepository::new();
+        RawAdapter::new(analysis_repo, project_id, run_id)
     }
 
     #[test]
