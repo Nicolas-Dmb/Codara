@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[macro_use]
+mod contract_tests;
+
 mod python;
 
 use crate::analysis::connector::Adapter;
