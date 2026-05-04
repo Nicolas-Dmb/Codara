@@ -94,7 +94,19 @@ fn extract_name_from_import(node: tree_sitter::Node, source_code: &str) -> Resul
 
 
 #[cfg(test)]
-mod extract_tests {
+mod tests {
+    use super::*;
+
+    adapter_contract_tests!(
+        adapter: PythonAdapter {},
+        extension: ".py",
+        valid_source: "import os\n\nclass Foo:\n    \"\"\"Foo doc\"\"\"\n    def bar(self):\n        pass\n\ndef baz():\n    \"\"\"baz doc\"\"\"\n    return 1\n",
+        ignored_filename: "__init__.py",
+    );
+}
+
+#[cfg(test)]
+mod python_specific_tests {
     use crate::model::SymbolKind;
 
     use super::*;
@@ -104,26 +116,6 @@ mod extract_tests {
 
     fn adapter() -> PythonAdapter {
         PythonAdapter {}
-    }
-
-    #[test]
-    fn test_extract_ignored_file() {
-        let result = adapter().extract("some/path/__init__.py");
-        assert_eq!(
-            result.unwrap_err(),
-            ExtractionIssue::Warning(AnalysisWarning::IgnoredFile {
-                path: "some/path/__init__.py".to_string(),
-            })
-        );
-    }
-
-    #[test]
-    fn test_extract_unreadable_file() {
-        let result = adapter().extract("/nonexistent/path/file.py");
-        assert!(matches!(
-            result.unwrap_err(),
-            ExtractionIssue::Retryable(RetryableIssue::UnreadableFile { .. })
-        ));
     }
 
     #[test]

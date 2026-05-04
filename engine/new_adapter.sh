@@ -32,7 +32,7 @@ impl Adapter for $ADAPTER_NAME {
 
     fn supported_extensions(&self) -> &[&'static str] {
         // TODO: return the supported extensions for this adapter
-        &[".$LANG_NAME"]
+        &[]
     }
 
     fn ignore_files(&self) -> &[&'static str] {
@@ -53,6 +53,19 @@ impl Adapter for $ADAPTER_NAME {
         Ok(raw_module)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    adapter_contract_tests!(
+        adapter: $ADAPTER_NAME {},
+        extension: //TODO: provide a valid extension for this adapter (e.g., ".java"),
+        valid_source: // TODO: provide a valid source code example for this adapter
+        ignored_filename: // TODO: return the list of files to ignore for this adapter,
+    );
+}
+
 EOF
 
 echo "Created src/adapters/$LANG_NAME/mod.rs"
