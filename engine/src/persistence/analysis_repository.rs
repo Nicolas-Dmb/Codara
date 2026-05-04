@@ -1,12 +1,16 @@
 use sqlx::Postgres;
-use crate::model::{Module, Relation, Symbol, ServiceError};
+use crate::model::{AnalysisWarning, Module, Relation, RetryableIssue, ServiceError, SourceCodeIssue, Symbol, run};
 
 pub trait AnalysisRepository {
     async fn store_batch(
         &self,
+        run_id: &str,
         modules: &[Module],
         symbols: &[Symbol],
         relations: &[Relation],
+        warnings: &[AnalysisWarning],
+        retryable_issues: &[RetryableIssue],
+        source_code_issues: &[SourceCodeIssue],
     ) -> Result<(), ServiceError>;
 }
 
@@ -86,14 +90,93 @@ impl SqlxAnalysisRepository {
         }
         Ok(())
     }
+
+    async fn store_warnings(
+        tx: &mut sqlx::Transaction<'_, Postgres>,
+        run_id: &str,
+        warnings: &[AnalysisWarning],
+    ) -> Result<(), ServiceError> {
+        for warning in warnings {
+            let (error_kind, path) = match warning {
+                AnalysisWarning::UnsupportedFileType { path } => ("unsupported_file_type", path.as_str()),
+                AnalysisWarning::IgnoredFile { path } => ("ignored_file", path.as_str()),
+            };
+
+            sqlx::query(
+                "INSERT INTO analysis_warning (run_id, kind, path) VALUES ($1, $2, $3)"
+            )
+            .bind(run_id)
+            .bind(error_kind)
+            .bind(path)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    async fn store_retryable_issues(
+        tx: &mut sqlx::Transaction<'_, Postgres>,
+        run_id: &str,
+        issues: &[RetryableIssue],
+    ) -> Result<(), ServiceError> {
+        for issue in issues {
+            let (error_kind, path, reason) = match issue {
+                RetryableIssue::UnreadableDirectory { path, reason } => ("unreadable_directory", path.as_str(), reason.as_str()),
+                RetryableIssue::UnreadableFile { path, reason } => ("unreadable_file", path.as_str(), reason.as_str()),
+                RetryableIssue::AdapterFailed { path, reason } => ("adapter_failed", path.as_str(), reason.as_str()),
+                RetryableIssue::UnresolvedImport { path, import_name } => ("unresolved_import", path.as_str(), import_name.as_str()),
+            };
+
+            sqlx::query(
+                "INSERT INTO retryable_issue (run_id, kind, path, reason) VALUES ($1, $2, $3, $4)"
+            )
+            .bind(run_id)
+            .bind(error_kind)
+            .bind(path)
+            .bind(reason)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    async fn store_source_code_issues(
+        tx: &mut sqlx::Transaction<'_, Postgres>,
+        run_id: &str,
+        issues: &[SourceCodeIssue],
+    ) -> Result<(), ServiceError> {
+        for issue in issues {
+            let (error_kind, path, reason) = match issue {
+                SourceCodeIssue::InvalidSyntax { path, reason } => ("invalid_syntax", path.as_str(), reason.as_str()),
+            };
+
+            sqlx::query(
+                "INSERT INTO source_code_issue (run_id, kind, path, reason) VALUES ($1, $2, $3, $4)"
+            )
+            .bind(run_id)
+            .bind(error_kind)
+            .bind(path)
+            .bind(reason)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+        }
+        Ok(())
+    }
 }
 
 impl AnalysisRepository for SqlxAnalysisRepository {
     async fn store_batch(
         &self,
+        run_id: &str,
         modules: &[Module],
         symbols: &[Symbol],
         relations: &[Relation],
+        warnings: &[AnalysisWarning],
+        retryable_issues: &[RetryableIssue],
+        source_code_issues: &[SourceCodeIssue],
     ) -> Result<(), ServiceError> {
         let mut tx = self.pool.begin()
             .await
@@ -102,6 +185,11 @@ impl AnalysisRepository for SqlxAnalysisRepository {
         Self::store_modules(&mut tx, modules).await?;
         Self::store_symbols(&mut tx, symbols).await?;
         Self::store_relations(&mut tx, relations).await?;
+
+
+        Self::store_warnings(&mut tx, &run_id, warnings).await?;
+        Self::store_retryable_issues(&mut tx, &run_id, retryable_issues).await?;
+        Self::store_source_code_issues(&mut tx, &run_id, source_code_issues).await?;
 
         tx.commit()
             .await

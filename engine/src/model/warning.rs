@@ -44,20 +44,6 @@ pub enum AnalysisWarning {
     IgnoredFile {
         path: String,
     },
-    #[error("unsupported symbol kind '{kind}' in {path}")]
-    UnsupportedSymbolKind {
-        path: String,
-        kind: String,
-    },
-    #[error("missing symbol name in {path}")]
-    MissingSymbolName {
-        path: String,
-    },
-    #[error("unsupported relation kind '{kind}' in {path}")]
-    UnsupportedRelationKind {
-        path: String,
-        kind: String,
-    },
 }
 
 #[derive(Debug, Error, PartialEq)]

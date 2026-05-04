@@ -48,6 +48,33 @@ CREATE TABLE relation (
     line INTEGER NOT NULL
 );
 
+-- Recreate analysis_warning with simplified schema matching store_warnings
+DROP INDEX IF EXISTS idx_warning_analysis_run;
+DROP TABLE IF EXISTS analysis_warning;
+
+CREATE TABLE analysis_warning (
+    id SERIAL PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('unsupported_file_type', 'ignored_file')),
+    path TEXT NOT NULL
+);
+
+CREATE TABLE retryable_issue (
+    id SERIAL PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('unreadable_directory', 'unreadable_file', 'adapter_failed', 'unresolved_import')),
+    path TEXT NOT NULL,
+    reason TEXT NOT NULL
+);
+
+CREATE TABLE source_code_issue (
+    id SERIAL PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('invalid_syntax')),
+    path TEXT NOT NULL,
+    reason TEXT NOT NULL
+);
+
 -- Indexes
 CREATE INDEX idx_module_run_id ON module(run_id);
 CREATE INDEX idx_symbol_module_id ON symbol(module_id);
@@ -56,3 +83,6 @@ CREATE INDEX idx_symbol_parent ON symbol(parent_symbol_id);
 CREATE INDEX idx_relation_module_id ON relation(module_id);
 CREATE INDEX idx_relation_run_id ON relation(run_id);
 CREATE INDEX idx_relation_target ON relation(target_symbol_id);
+CREATE INDEX idx_warning_run_id ON analysis_warning(run_id);
+CREATE INDEX idx_retryable_run_id ON retryable_issue(run_id);
+CREATE INDEX idx_source_code_run_id ON source_code_issue(run_id);

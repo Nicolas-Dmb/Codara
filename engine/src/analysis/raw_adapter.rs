@@ -13,10 +13,9 @@ impl<R: AnalysisRepository> RawAdapter<R> {
         Self { context, project_id, run_id }
     }
 
-
     pub async fn convert_and_store(&self, analysis: AnalysisReport) -> Result<(), ServiceError> {
         let (modules, symbols, relations) = self.convert_module_and_children(analysis.raw_modules);
-        self.context.analysis_repo.store_batch(&modules, &symbols, &relations).await?;
+        self.context.analysis_repo.store_batch(&self.run_id.to_string(), &modules, &symbols, &relations, &analysis.warnings, &analysis.retryables, &analysis.source_code_issues).await?;
         Ok(())
     }
 
@@ -66,7 +65,7 @@ impl<R: AnalysisRepository> RawAdapter<R> {
 mod tests {
     use super::*;
     use std::sync::Mutex;
-    use crate::model::{RelationKind, SymbolKind};
+    use crate::model::{RelationKind, SymbolKind, AnalysisWarning, RetryableIssue, SourceCodeIssue};
 
     struct FakeAnalysisRepository {
         stored: Mutex<Option<(Vec<Module>, Vec<Symbol>, Vec<Relation>)>>,
@@ -81,9 +80,13 @@ mod tests {
     impl AnalysisRepository for FakeAnalysisRepository {
         async fn store_batch(
             &self,
-            modules: &[Module],
-            symbols: &[Symbol],
-            relations: &[Relation],
+            _run_id: &str,
+            _modules: &[Module],
+            _symbols: &[Symbol],
+            _relations: &[Relation],
+            _warnings: &[AnalysisWarning],
+            _retryable_issues: &[RetryableIssue],
+            _source_code_issues: &[SourceCodeIssue],
         ) -> Result<(), ServiceError> {
             *self.stored.lock().unwrap() = None;
             Ok(())

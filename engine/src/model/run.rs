@@ -23,6 +23,7 @@ pub enum RunStatus {
     Running,
     Success,
     Failed,
+    PartialSuccess,
 }
 
 #[derive(Debug)]
@@ -63,6 +64,13 @@ impl Run {
     pub fn fail(&mut self, error: String) {
         self.status = RunStatus::Failed;
         self.error_message = Some(error);
+        self.finished_at = Some(Utc::now());
+    }
+
+    /// Use this when the run completes with retryable issues
+    /// It will used when implementing the "retry" feature. 
+    pub fn partial_success(&mut self, error: String) {
+        self.status = RunStatus::PartialSuccess;
         self.finished_at = Some(Utc::now());
     }
 }
