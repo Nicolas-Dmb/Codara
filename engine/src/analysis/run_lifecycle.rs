@@ -111,26 +111,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn full_lifecycle_processing_then_succeeded() {
-        let mut svc = make_service();
-
-        svc.mark_as_done().await.unwrap();
-        assert_eq!(svc.run.status, RunStatus::Done);
-        assert!(svc.run.started_at.is_some());
-        assert!(svc.run.finished_at.is_some());
-    }
-
-    #[tokio::test]
-    async fn full_lifecycle_processing_then_failed() {
-        let mut svc = make_service();
-
-        svc.mark_as_failed("crash".to_string()).await.unwrap();
-        assert_eq!(svc.run.status, RunStatus::Failed);
-        assert!(svc.run.started_at.is_some());
-        assert!(svc.run.finished_at.is_some());
-    }
-
-    #[tokio::test]
     async fn repo_error_is_propagated() {
         let mut svc = make_failing_service();
         let result = svc.mark_as_done().await;

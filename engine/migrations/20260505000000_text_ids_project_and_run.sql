@@ -22,7 +22,7 @@ CREATE TABLE analysis_run (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     branch TEXT NOT NULL,
-    commit TEXT,
+    commit TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'done', 'failed', 'partial_success')),
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),

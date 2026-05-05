@@ -1,15 +1,25 @@
 use crate::model;
 use model::{Run, Project, RunError};
-use crate::persistence::{AnalysisRepository, RunRepository};
+use crate::persistence::{AnalysisRepository, RunRepository, ProjectRepository};
 use crate::services::Context;
 use crate::analysis;
 use std::process::Command;
 use tempfile::TempDir;
 
-pub async fn run_analysis<A: AnalysisRepository, R: RunRepository>(context: Context<A, R>, run: Run, project: Project) {
-    let Context { analysis_repo, run_repo } = context;
+pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRepository>(context: Context<A, R, P>, run: Run) {
+    let Context { analysis_repo, run_repo, project_repo } = context;
     let run_id = run.id.clone();
+    let project_id = run.project_id.clone();
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
+
+    // Step 0: request the project details from the database
+    let project = match project_repo.find_by_id(&project_id).await{
+        Ok(project) => project,
+        Err(e) => {
+            lifecycle.mark_as_failed(format!("Failed to fetch project details: {}", e)).await.expect("Failed to mark run as failed");
+            return;
+        }
+    };
 
     // Step 1: Clone the repository into a temporary directory
     let tmp_dir = match TempDir::new() {
