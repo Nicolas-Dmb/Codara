@@ -15,7 +15,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
 
     // Step 0: request the project details from the database
-    info!("Fetching project details for project) {}", project_id);
+    info!("Fetching project details for project {}", project_id);
     let project = match project_repo.find_by_id(&project_id).await{
         Ok(project) => project,
         Err(e) => {
@@ -25,7 +25,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     };
 
     // Step 1: Clone the repository into a temporary directory
-    info!("Cloning repository {} (branch {})", project.repo_url, project.branch);
+    info!("Cloning repository {} (branch {})", project.id, project.branch);
     let tmp_dir = match TempDir::new() {
         Ok(dir) => dir,
         Err(e) => {
@@ -65,10 +65,11 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     // Step 4: Mark the run as completed
     if is_partial_success {
         lifecycle.mark_as_partial_success().await.expect("Failed to mark run as partially successful");
+        info!("Run completed with partial success due to retryable issues");
     } else {
         lifecycle.mark_as_done().await.expect("Failed to mark run as successful");
+        info!("Run completed successfully");
     }
-    info!("Run completed successfully");
 
 }
 
