@@ -4,6 +4,8 @@ use crate::model::{ Run, ServiceError};
 use crate::persistence::{SqlxAnalysisRepository, SqlxRunRepository, SqlxProjectRepository, RunRepository};
 use crate::services::{Context, ShellCloner};
 use crate::analysis::runner::run_analysis;
+use tracing::{info, error};
+
 
 const POLL_INTERVAL: Duration = Duration::from_mins(1);
 
@@ -14,7 +16,7 @@ pub async fn start_listener(pool: PgPool) {
 
         match poll_once(&run_repo).await {
             Ok(Some(run)) => {
-                println!("Claimed run {}", run.id);
+                info!("Claimed run {}", run.id);
                 let analysis_repo = SqlxAnalysisRepository::new(pool.clone());
                 let cloner = ShellCloner::new();
                 let context = Context::new(analysis_repo, run_repo, project_repo, cloner);
@@ -22,7 +24,7 @@ pub async fn start_listener(pool: PgPool) {
             }
             Ok(None) => {}
             Err(e) => {
-                eprintln!("Polling error: {}", e);
+                error!("Polling error: {}", e);
             }
         }
 

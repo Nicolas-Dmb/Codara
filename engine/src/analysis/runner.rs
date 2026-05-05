@@ -4,7 +4,10 @@ use crate::persistence::{AnalysisRepository, RunRepository, ProjectRepository};
 use crate::services::{Context, Cloner};
 use crate::analysis;
 use tempfile::TempDir;
+use tracing::{instrument, info};
 
+
+#[instrument(name = "run_analysis", skip(context))]
 pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRepository, C: Cloner>(context: Context<A, R, P, C>, run: Run) {
     let Context { analysis_repo, run_repo, project_repo, cloner } = context;
     let run_id = run.id.clone();
@@ -12,6 +15,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
 
     // Step 0: request the project details from the database
+    info!("Fetching project details for project) {}", project_id);
     let project = match project_repo.find_by_id(&project_id).await{
         Ok(project) => project,
         Err(e) => {
@@ -21,6 +25,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     };
 
     // Step 1: Clone the repository into a temporary directory
+    info!("Cloning repository {} (branch {})", project.repo_url, project.branch);
     let tmp_dir = match TempDir::new() {
         Ok(dir) => dir,
         Err(e) => {
@@ -35,6 +40,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     }
 
     // Step 2: Walk the repository and extract modules
+    info!("Walking repository and extracting modules");
     let adapters_registry = analysis::connector::AdapterRegistry::new();
     let walk_result = analysis::walker::walk(
         tmp_dir.path(),
@@ -48,6 +54,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     let is_partial_success = walk_result.as_ref().unwrap().has_retryables();
 
     // Step 3: Store the extracted modules in the database
+    info!("Storing extracted modules in the database");
     let adapter = analysis::raw_adapter::RawAdapter::new(analysis_repo, project.id.clone(), run_id.clone());
     let convert_result = adapter.convert_and_store(walk_result.unwrap()).await;
     if let Err(e) = convert_result {
@@ -61,6 +68,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     } else {
         lifecycle.mark_as_done().await.expect("Failed to mark run as successful");
     }
+    info!("Run completed successfully");
 
 }
 

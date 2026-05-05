@@ -1,5 +1,6 @@
-use crate::model::{Run, ServiceError};
+use crate::model::{Run};
 use crate::persistence::RunRepository;
+use tracing::{error};
 
 pub struct RunLifecycle<R: RunRepository> {
     run_repo: R,
@@ -11,19 +12,37 @@ impl<R: RunRepository> RunLifecycle<R> {
         Self { run_repo, run }
     }
 
-    pub async fn mark_as_failed(&mut self, error_message: String) -> Result<(), ServiceError> {
+    pub async fn mark_as_failed(&mut self, error_message: String) -> Result<(), ()> {
         self.run.fail(error_message);
-        self.run_repo.update_status(&self.run).await
+        match self.run_repo.update_status(&self.run).await{
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!(error = %e, "Failed to update run status to failed");
+                Err(())
+            }   
+        }
     }
 
-    pub async fn mark_as_done(&mut self) -> Result<(), ServiceError> {
+    pub async fn mark_as_done(&mut self) -> Result<(), ()> {
         self.run.succeed();
-        self.run_repo.update_status(&self.run).await
+        match self.run_repo.update_status(&self.run).await{
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!(error = %e, "Failed to update run status to done");
+                Err(())
+            }
+        }
     }
 
-    pub async fn mark_as_partial_success(&mut self) -> Result<(), ServiceError> {
+    pub async fn mark_as_partial_success(&mut self) -> Result<(), ()> {
         self.run.partial_success();
-        self.run_repo.update_status(&self.run).await
+        match self.run_repo.update_status(&self.run).await{
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!(error = %e, "Failed to update run status to partial success");
+                Err(())
+            }
+        }
     }
 }
 
@@ -31,7 +50,7 @@ impl<R: RunRepository> RunLifecycle<R> {
 mod tests {
     use super::*;
     use std::sync::Mutex;
-    use crate::model::{ProjectId, RunStatus};
+    use crate::model::{ProjectId, RunStatus, Run, ServiceError};
 
     struct FakeRunRepository {
         last_status: Mutex<Option<String>>,
