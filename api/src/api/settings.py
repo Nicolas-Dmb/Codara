@@ -1,4 +1,6 @@
-from pydantic_settings import BaseSettings,SettingsConfigDict
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -8,6 +10,8 @@ class Settings(BaseSettings):
     db_host: str
     db_port: int
     cors_origins: list[str]
+    env: Literal["dev", "prod"] = "dev"
+    log_level: str = "INFO"
 
     model_config = SettingsConfigDict(env_file=".env")
 
