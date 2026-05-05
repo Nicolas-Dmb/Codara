@@ -1,13 +1,15 @@
 import logging
 
 from fastapi import FastAPI
-from .config import setup_cors
+
+from .core import configure_logging, lifespan, setup_cors
 from .router import router
 
-logging.basicConfig(level=logging.INFO)
-logging.info("Starting the application...")
+configure_logging()
+logger = logging.getLogger(__name__)
+logger.info("Starting the application...")
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan, title="Aterminal API", version="1.0.0")
 
 setup_cors(app)
 app.include_router(router)
