@@ -8,7 +8,7 @@ chrono = "0.4.44"
 dotenvy = "0.15.7"
 tree-sitter = "0.25"
 tree-sitter-python = "0.25"
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-rustls", "chrono"] }
 tempfile = "3.27.0"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
