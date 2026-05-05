@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs;
 use crate::analysis::connector;
-use crate::model::{Run, RunError, RetryableIssue, AnalysisReport, ExtractionIssue};
+use crate::model::{RunError, RetryableIssue, AnalysisReport, ExtractionIssue};
 
 fn read_directory(
     path: &Path,
@@ -99,7 +99,7 @@ mod walker_tests {
     use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
 
-    use crate::model::{RunError, RawModule, AnalysisWarning, RetryableIssue, Project, Run};
+    use crate::model::{RunError, RawModule, AnalysisWarning, RetryableIssue};
 
     struct FakeAdapterRegistry;
     impl connector::AdapterRegistryTrait for FakeAdapterRegistry {
