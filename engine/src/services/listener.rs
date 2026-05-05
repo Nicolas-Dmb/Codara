@@ -2,7 +2,7 @@ use std::time::Duration;
 use sqlx::PgPool;
 use crate::model::{ Run, ServiceError};
 use crate::persistence::{SqlxAnalysisRepository, SqlxRunRepository, SqlxProjectRepository, RunRepository};
-use crate::services::Context;
+use crate::services::{Context, ShellCloner};
 use crate::analysis::runner::run_analysis;
 
 const POLL_INTERVAL: Duration = Duration::from_mins(1);
@@ -16,7 +16,8 @@ pub async fn start_listener(pool: PgPool) {
             Ok(Some(run)) => {
                 println!("Claimed run {}", run.id);
                 let analysis_repo = SqlxAnalysisRepository::new(pool.clone());
-                let context = Context::new(analysis_repo, run_repo, project_repo);
+                let cloner = ShellCloner::new();
+                let context = Context::new(analysis_repo, run_repo, project_repo, cloner);
                 run_analysis(context, run).await;
             }
             Ok(None) => {}
