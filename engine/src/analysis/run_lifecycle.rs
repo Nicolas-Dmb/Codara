@@ -21,11 +21,6 @@ impl<R: RunRepository> RunLifecycle<R> {
         self.run_repo.update_status(&self.run).await
     }
 
-    pub async fn mark_as_processing(&mut self) -> Result<(), ServiceError> {
-        self.run.start();
-        self.run_repo.update_status(&self.run).await
-    }
-
     pub async fn mark_as_partial_success(&mut self) -> Result<(), ServiceError> {
         self.run.partial_success();
         self.run_repo.update_status(&self.run).await
@@ -65,6 +60,10 @@ mod tests {
             *self.last_status.lock().unwrap() = Some(run.status.to_string());
             Ok(())
         }
+
+        async fn claim_next_pending(&self) -> Result<Option<Run>, ServiceError> {
+            Ok(None)
+        }
     }
 
     fn make_run() -> Run {
@@ -78,16 +77,6 @@ mod tests {
 
     fn make_failing_service() -> RunLifecycle<FakeRunRepository> {
         RunLifecycle::new(FakeRunRepository::failing(), make_run())
-    }
-
-    #[tokio::test]
-    async fn mark_as_processing_sets_status() {
-        let mut svc = make_service();
-        let result = svc.mark_as_processing().await;
-        assert!(result.is_ok());
-        assert_eq!(svc.run.status, RunStatus::Processing);
-        assert!(svc.run.started_at.is_some());
-        assert_eq!(svc.run_repo.last_status(), Some("processing".to_string()));
     }
 
     #[tokio::test]
@@ -124,8 +113,6 @@ mod tests {
     #[tokio::test]
     async fn full_lifecycle_processing_then_succeeded() {
         let mut svc = make_service();
-        svc.mark_as_processing().await.unwrap();
-        assert_eq!(svc.run.status, RunStatus::Processing);
 
         svc.mark_as_done().await.unwrap();
         assert_eq!(svc.run.status, RunStatus::Done);
@@ -136,7 +123,6 @@ mod tests {
     #[tokio::test]
     async fn full_lifecycle_processing_then_failed() {
         let mut svc = make_service();
-        svc.mark_as_processing().await.unwrap();
 
         svc.mark_as_failed("crash".to_string()).await.unwrap();
         assert_eq!(svc.run.status, RunStatus::Failed);
@@ -147,7 +133,7 @@ mod tests {
     #[tokio::test]
     async fn repo_error_is_propagated() {
         let mut svc = make_failing_service();
-        let result = svc.mark_as_processing().await;
+        let result = svc.mark_as_done().await;
         assert!(result.is_err());
     }
 }

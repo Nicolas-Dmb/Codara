@@ -8,6 +8,10 @@ impl ProjectId {
     pub fn new(namespace: String, project_name: String) -> Self {
         Self(format!("{}::{}", namespace, project_name))
     }
+
+    pub fn from_raw(raw: String) -> Self {
+        Self(raw)
+    }
 }
 
 impl fmt::Display for ProjectId {
@@ -45,6 +49,10 @@ impl Project {
         }
 
         Ok((namespace, name))
+    }
+
+    pub fn from_db(id: ProjectId, name: String, repo_url: String, branch: String) -> Self {
+        Self { id, name, repo_url, branch }
     }
 
     pub fn new(repo_url: String, branch: String) -> Result<Self, ProjectError> {

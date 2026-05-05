@@ -11,8 +11,6 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository>(context: Cont
     let run_id = run.id.clone();
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
 
-    lifecycle.mark_as_processing().await.expect("Failed to mark run as processing");
-
     // Step 1: Clone the repository into a temporary directory
     let tmp_dir = match TempDir::new() {
         Ok(dir) => dir,

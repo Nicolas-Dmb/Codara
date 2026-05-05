@@ -1,6 +1,8 @@
 use std::fmt;
+use std::str::FromStr;
 use chrono::{DateTime, Utc};
 use super::project::ProjectId;
+use super::error::ServiceError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RunId(String);
@@ -8,6 +10,10 @@ pub struct RunId(String);
 impl RunId {
     pub fn new(project_id: &ProjectId, commit: &str) -> Self {
         Self(format!("{}::{}", project_id, commit))
+    }
+
+    pub fn from_raw(raw: String) -> Self {
+        Self(raw)
     }
 }
 
@@ -38,9 +44,27 @@ impl fmt::Display for RunStatus {
     }
 }
 
+impl FromStr for RunStatus {
+    type Err = ServiceError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "pending" => Ok(RunStatus::Pending),
+            "processing" => Ok(RunStatus::Processing),
+            "done" => Ok(RunStatus::Done),
+            "failed" => Ok(RunStatus::Failed),
+            "partial_success" => Ok(RunStatus::PartialSuccess),
+            other => Err(ServiceError::DatabaseRequestFailed(
+                format!("Unknown run status: {}", other),
+            )),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Run {
     pub id: RunId,
+    pub project_id: ProjectId,
     pub branch: String,
     pub commit: String,
     pub status: RunStatus,
@@ -54,6 +78,7 @@ impl Run {
         let id = RunId::new(&project_id, &commit);
         Self {
             id,
+            project_id,
             branch,
             commit,
             status: RunStatus::Pending,
@@ -61,11 +86,6 @@ impl Run {
             started_at: None,
             finished_at: None,
         }
-    }
-
-    pub fn start(&mut self) {
-        self.status = RunStatus::Processing;
-        self.started_at = Some(Utc::now());
     }
 
     pub fn succeed(&mut self) {
