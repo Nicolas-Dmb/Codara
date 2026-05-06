@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
-from .schemas import AnalyseRequest, AnalyseResponse
+from .schemas import AnalyseRequest, AnalyseResponse, RunResponse
 from .services import AnalyseService, get_analyse_service
 
 router = APIRouter()
@@ -15,5 +15,8 @@ async def analyse(
     request: AnalyseRequest,
     service: AnalyseService = Depends(get_analyse_service),
 ) -> AnalyseResponse:
-    run_status = await service.analyse(request)
-    return AnalyseResponse(message="Analysis request received.", status=run_status)
+    run = await service.analyse(request)
+    return AnalyseResponse(
+        message="Analysis request received.",
+        run=RunResponse.model_validate(run),
+    )

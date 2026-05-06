@@ -2,7 +2,7 @@ from typing import Tuple
 
 from fastapi import Depends
 
-from ..models import Project, ProjectId, Run, RunId, Status
+from ..models import Project, ProjectId, Run, RunId
 from ..repositories import (
     CodebaseRepository,
     ProjectRepository,
@@ -30,7 +30,7 @@ class AnalyseService:
         self.project_repository = project_repository
         self.codebase_repository = codebase_repository
 
-    async def analyse(self, analyse_request: AnalyseRequest) -> Status:
+    async def analyse(self, analyse_request: AnalyseRequest) -> Run:
         """Generate Run and Project models"""
         url = analyse_request.build_clone_url()
 
@@ -72,11 +72,11 @@ class AnalyseService:
     async def project_is_already_register(self, project_id: ProjectId) -> bool:
         return await self.project_repository.is_already_register(project_id)
 
-    async def register_run(self, run: Run, project: Project) -> Status:
+    async def register_run(self, run: Run, project: Project) -> Run:
         if not await self.project_is_already_register(project.id):
             await self.project_repository.save(project)
         await self.run_repository.save(run)
-        return run.status
+        return run
 
 
 def get_analyse_service(

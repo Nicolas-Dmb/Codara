@@ -1,5 +1,7 @@
+from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel
+
+from pydantic import BaseModel, ConfigDict
 
 from ..models import Status
 
@@ -22,6 +24,19 @@ class AnalyseRequest(BaseModel):
                 return f"https://bitbucket.org/{self.namespace}/{self.project_name}.git"
 
 
+class RunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    project_id: str
+    branch: str
+    commit: str
+    status: Status
+    error_message: str | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
 class AnalyseResponse(BaseModel):
     message: str
-    status: Status
+    run: RunResponse

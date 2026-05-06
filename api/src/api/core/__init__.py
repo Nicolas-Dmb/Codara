@@ -4,7 +4,7 @@ from .cors import setup_cors
 from .logging import configure_logging
 from .exception_handlers import register_exception_handlers
 
-__All__ = [
+__all__ = [
     "lifespan",
     "get_db",
     "bearer_scheme",
