@@ -2,6 +2,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 import asyncpg
+from asyncpg import Connection
+from typing import AsyncGenerator
 from ..settings import settings
 
 @asynccontextmanager
@@ -19,6 +21,6 @@ async def lifespan(app: FastAPI):
     await app.state.db_pool.close()
 
 
-async def get_db(request: Request):
+async def get_db(request: Request) -> AsyncGenerator[Connection, None]:
     async with request.app.state.db_pool.acquire() as connection:
         yield connection

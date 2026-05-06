@@ -3,7 +3,7 @@ use std::process::Command;
 use crate::model::{Project, RunError};
 
 pub trait Cloner {
-    fn clone_repo(&self, project: &Project, target: &Path) -> Result<(), RunError>;
+    fn clone_repo(&self, project: &Project, target: &Path, commit: &str) -> Result<(), RunError>;
 }
 
 pub struct ShellCloner;
@@ -15,11 +15,12 @@ impl ShellCloner {
 }
 
 impl Cloner for ShellCloner {
-    fn clone_repo(&self, project: &Project, target: &Path) -> Result<(), RunError> {
+    fn clone_repo(&self, project: &Project, target: &Path, commit: &str) -> Result<(), RunError> {
         let output = Command::new("bash")
             .arg("clone.sh")
             .arg(&project.repo_url)
             .arg(&project.branch)
+            .arg(&commit)
             .arg(target)
             .output()
             .map_err(|e| RunError::CloneFailed(e.to_string()))?;
@@ -47,7 +48,7 @@ mod tests {
         let project = make_project("/nonexistent/repo/path", "main");
         let tmp_dir = TempDir::new().unwrap();
 
-        let result = cloner.clone_repo(&project, tmp_dir.path());
+        let result = cloner.clone_repo(&project, tmp_dir.path(), "abc123");
 
         assert!(matches!(result, Err(RunError::CloneFailed(_))));
     }
@@ -65,11 +66,14 @@ mod tests {
         Command::new("git").args(["commit", "-m", "init"]).current_dir(source_path).output().unwrap();
         Command::new("git").args(["branch", "-M", "main"]).current_dir(source_path).output().unwrap();
 
+        let head_sha = Command::new("git").args(["rev-parse", "HEAD"]).current_dir(source_path).output().unwrap();
+        let commit = String::from_utf8_lossy(&head_sha.stdout).trim().to_string();
+
         let cloner = ShellCloner::new();
         let project = make_project(&source_path.to_string_lossy(), "main");
         let clone_dir = TempDir::new().unwrap();
 
-        let result = cloner.clone_repo(&project, clone_dir.path());
+        let result = cloner.clone_repo(&project, clone_dir.path(), &commit);
 
         assert!(result.is_ok());
         assert!(clone_dir.path().join("file.txt").exists());
