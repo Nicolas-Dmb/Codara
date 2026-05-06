@@ -1,55 +1,87 @@
-from ..repositories import RunRepository, ProjectRepository, CodebaseRepository
-from ..schemas import AnalyseRequest, RepositoryNotFoundError, UnsupportedRepositoryProvider, RegisterNewRunError
-from ..models import Run, Project, RunId, Status
 from typing import Tuple
 
+from fastapi import Depends
+
+from ..models import Project, ProjectId, Run, RunId, Status
+from ..repositories import (
+    CodebaseRepository,
+    ProjectRepository,
+    RunRepository,
+    get_codebase_repository,
+    get_project_repository,
+    get_run_repository,
+)
+from ..schemas import (
+    AnalyseRequest,
+    RegisterNewRunError,
+    RepositoryNotFoundError,
+    RunAlreadyExistsError,
+)
+
+
 class AnalyseService:
-    def __init__(self, run_repository: RunRepository, project_repository: ProjectRepository, codebase_repository: CodebaseRepository):
+    def __init__(
+        self,
+        run_repository: RunRepository,
+        project_repository: ProjectRepository,
+        codebase_repository: CodebaseRepository,
+    ):
         self.run_repository = run_repository
         self.project_repository = project_repository
         self.codebase_repository = codebase_repository
 
     async def analyse(self, analyse_request: AnalyseRequest) -> Status:
         """Generate Run and Project models"""
-        url = analyse_request.build_repo_url()
-        if not url:
-            raise UnsupportedRepositoryProvider(f"Unsupported repository provider: {analyse_request.provider}")
-        
-        commit = await self.get_last_commit(url, analyse_request.branch)
+        url = analyse_request.build_clone_url()
+
+        commit = await self.get_last_commit(analyse_request)
         if not commit:
-            raise RepositoryNotFoundError("Failed to fetch the last commit from the codebase repository.")
-        
-        project, run = self.create_run(analyse_request, url, commit)
+            raise RepositoryNotFoundError(
+                "Failed to fetch the last commit from the codebase repository."
+            )
 
-        if not await self.run_is_already_register(run.id):
-            try:
-                return await self.register_run(run, project)
-            except Exception as e:
-                raise RegisterNewRunError(f"Failed to register new run: {str(e)}")
+        project, run = self.initialize_run(analyse_request, url, commit)
 
-        
-        # TODO: check status then return the appropriate response (pending, processing, done, failed, partial_success)
-        raise Exception("Run already exists. Status checking is not implemented yet.")
+        if await self.run_is_already_register(run.id):
+            # TODO: check status then return the appropriate response
+            #       (pending, processing, done, failed, partial_success)
+            raise RunAlreadyExistsError(
+                f"Run {run.id} already exists. Status checking is not implemented yet."
+            )
 
-    async def get_last_commit(self, url: str, branch: str) -> str | None:
-        commit = await self.codebase_repository.get_last_commit(url, branch)
-        return commit
-    
-    def create_run(self, analyse_request: AnalyseRequest, url: str, commit: str) -> Tuple[Project, Run]:
-        project = Project(analyse_request, url=url)  
-        run = Run(project.id, analyse_request.branch, commit)
+        try:
+            return await self.register_run(run, project)
+        except Exception as e:
+            raise RegisterNewRunError(f"Failed to register new run: {e}") from e
+
+    async def get_last_commit(self, request: AnalyseRequest) -> str | None:
+        return await self.codebase_repository.get_last_commit(
+            request.provider, request.namespace, request.project_name, request.branch
+        )
+
+    def initialize_run(
+        self, analyse_request: AnalyseRequest, url: str, commit: str
+    ) -> Tuple[Project, Run]:
+        project = Project.from_request(analyse_request, url)
+        run = Run.create(project.id, analyse_request.branch, commit)
         return project, run
-    
+
     async def run_is_already_register(self, run_id: RunId) -> bool:
-        run_result= await self.run_repository.is_already_register(run_id)
-        return run_result
-    
-    async def project_is_already_register(self, project_id: str) -> bool:
-        project_result = await self.project_repository.is_already_register(project_id)
-        return project_result
-    
-    async def register_run(self, run: Run, project: Project):
+        return await self.run_repository.is_already_register(run_id)
+
+    async def project_is_already_register(self, project_id: ProjectId) -> bool:
+        return await self.project_repository.is_already_register(project_id)
+
+    async def register_run(self, run: Run, project: Project) -> Status:
         if not await self.project_is_already_register(project.id):
             await self.project_repository.save(project)
         await self.run_repository.save(run)
         return run.status
+
+
+def get_analyse_service(
+    run_repo: RunRepository = Depends(get_run_repository),
+    project_repo: ProjectRepository = Depends(get_project_repository),
+    codebase_repo: CodebaseRepository = Depends(get_codebase_repository),
+) -> AnalyseService:
+    return AnalyseService(run_repo, project_repo, codebase_repo)

@@ -12,6 +12,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     let Context { analysis_repo, run_repo, project_repo, cloner } = context;
     let run_id = run.id.clone();
     let project_id = run.project_id.clone();
+    let commit = run.commit.clone();
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
 
     // Step 0: request the project details from the database
@@ -34,7 +35,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
         }
     };
 
-    if let Err(e) = cloner.clone_repo(&project, tmp_dir.path()) {
+    if let Err(e) = cloner.clone_repo(&project, tmp_dir.path(), &commit) {
         lifecycle.mark_as_failed(format!("Failed to clone repository: {}", e)).await.expect("Failed to mark run as failed");
         return;
     }
@@ -189,7 +190,7 @@ mod tests {
     }
 
     impl Cloner for FakeCloner {
-        fn clone_repo(&self, _project: &Project, target: &Path) -> Result<(), RunError> {
+        fn clone_repo(&self, _project: &Project, target: &Path, commit: &str) -> Result<(), RunError> {
             if self.should_fail {
                 return Err(RunError::CloneFailed("fake clone error".to_string()));
             }

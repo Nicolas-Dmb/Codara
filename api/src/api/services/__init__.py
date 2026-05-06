@@ -1,3 +1,3 @@
-from .run_service import AnalyseService
+from .run_service import AnalyseService, get_analyse_service
 
-__All__ = ["AnalyseService"]
+__all__ = ["AnalyseService", "get_analyse_service"]

@@ -26,3 +26,8 @@ class StatusError(RunError):
 class RegisterNewRunError(RunError):
     """Raised when there is an error while registering a new run or new project."""
     pass
+
+# TODO : TMP Error, to be removed when status checking is implemented
+class RunAlreadyExistsError(RunError):
+    """Raised when a run with the same id is already registered."""
+    pass

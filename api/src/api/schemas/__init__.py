@@ -1,4 +1,17 @@
-from .analyse import AnalyseRequest
-from .errors import RepositoryNotFoundError, UnsupportedRepositoryProvider, RegisterNewRunError
+from .analyse import AnalyseRequest, AnalyseResponse, Provider
+from .errors import (
+    RepositoryNotFoundError,
+    UnsupportedRepositoryProvider,
+    RegisterNewRunError,
+    RunAlreadyExistsError,
+)
 
-__all__ = ["AnalyseRequest", "RepositoryNotFoundError", "UnsupportedRepositoryProvider", "RegisterNewRunError"]
+__All__ = [
+    "AnalyseRequest",
+    "AnalyseResponse",
+    "Provider",
+    "RepositoryNotFoundError",
+    "UnsupportedRepositoryProvider",
+    "RegisterNewRunError",
+    "RunAlreadyExistsError",
+]

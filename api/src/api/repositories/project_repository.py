@@ -11,9 +11,8 @@ class ProjectRepository:
         self.db = db
 
     async def is_already_register(self, project_id: str) -> bool:
-        query = "SELECT COUNT(*) FROM projects WHERE id = $1"
-        result = await self.db.fetchval(query, project_id)
-        return result is not None
+        query = "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1)"
+        return bool(await self.db.fetchval(query, project_id))
     
     async def save(self, project: Project):
         query = """
