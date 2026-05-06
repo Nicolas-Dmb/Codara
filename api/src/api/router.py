@@ -15,6 +15,10 @@ async def analyse(
     request: AnalyseRequest,
     service: AnalyseService = Depends(get_analyse_service),
 ) -> AnalyseResponse:
+    """
+        Endpoint to initiate an run and project if not already existing.
+        else return the existing run and project.
+    """
     run = await service.analyse(request)
     return AnalyseResponse(
         message="Analysis request received.",
