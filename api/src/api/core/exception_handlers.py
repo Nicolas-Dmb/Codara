@@ -6,7 +6,6 @@ from fastapi.responses import JSONResponse
 from ..schemas import (
     RegisterNewRunError,
     RepositoryNotFoundError,
-    RunAlreadyExistsError,
     UnsupportedRepositoryProvider,
 )
 
@@ -37,5 +36,4 @@ async def register_new_run_handler(_: Request, exc: Exception) -> JSONResponse:
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(UnsupportedRepositoryProvider, unsupported_provider_handler)
     app.add_exception_handler(RepositoryNotFoundError, repository_not_found_handler)
-    app.add_exception_handler(RunAlreadyExistsError, run_already_exists_handler)
     app.add_exception_handler(RegisterNewRunError, register_new_run_handler)

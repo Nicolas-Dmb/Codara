@@ -2,7 +2,7 @@ from typing import Tuple
 
 from fastapi import Depends
 
-from ..models import Project, ProjectId, Run, RunId
+from ..models import Project, ProjectId, Run
 from ..repositories import (
     CodebaseRepository,
     ProjectRepository,
@@ -15,7 +15,6 @@ from ..schemas import (
     AnalyseRequest,
     RegisterNewRunError,
     RepositoryNotFoundError,
-    RunAlreadyExistsError,
 )
 
 
@@ -42,13 +41,10 @@ class AnalyseService:
 
         project, run = self.initialize_run(analyse_request, url, commit)
 
-        if await self.run_is_already_register(run.id):
-            # TODO: check status then return the appropriate response
-            #       (pending, processing, done, failed, partial_success)
-            raise RunAlreadyExistsError(
-                f"Run {run.id} already exists. Status checking is not implemented yet."
-            )
-
+        stored_run = await self.run_repository.get_run(run.id)
+        if stored_run is not None:
+            return stored_run
+        
         try:
             return await self.register_run(run, project)
         except Exception as e:
@@ -65,9 +61,6 @@ class AnalyseService:
         project = Project.from_request(analyse_request, url)
         run = Run.create(project.id, analyse_request.branch, commit)
         return project, run
-
-    async def run_is_already_register(self, run_id: RunId) -> bool:
-        return await self.run_repository.is_already_register(run_id)
 
     async def project_is_already_register(self, project_id: ProjectId) -> bool:
         return await self.project_repository.is_already_register(project_id)
