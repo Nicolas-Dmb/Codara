@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from .project import ProjectId
 from enum import Enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 
 class RunId(str):
@@ -41,4 +41,17 @@ class Run:
             project_id=project_id,
             branch=branch,
             commit=commit,
+        )
+    
+    @classmethod
+    def from_db_row(cls, run_id: RunId, row: dict[str, Any]) -> "Run":
+        return cls(
+            id=run_id,
+            project_id=row['project_id'],
+            branch=row['branch'],
+            commit=row['commit'],
+            status=Status(row['status']),
+            error_message=row['error_message'],
+            started_at=row['started_at'],
+            finished_at=row['finished_at']
         )

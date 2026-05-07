@@ -1,18 +1,13 @@
 from ..core import get_db
 from asyncpg import Connection
 from fastapi import Depends
-from ..models import Run, RunId, Status
-from typing import Tuple, Optional
+from ..models import Run, RunId
 
 
 class RunRepository:
 
     def __init__(self, db: Connection):
         self.db = db
-
-    async def is_already_register(self, run_id: RunId) -> bool:
-        query = "SELECT EXISTS(SELECT 1 FROM analysis_run WHERE id = $1)"
-        return bool(await self.db.fetchval(query, run_id))
 
     async def save(self, run: Run):
         query = """
@@ -30,17 +25,13 @@ class RunRepository:
             run.error_message,
         )
     
-    async def get_status(self, run_id: RunId) -> Tuple[Status, Optional[str]] | None:
-        query = "SELECT status, error_message FROM analysis_run WHERE id = $1"
+    async def get_run(self, run_id: RunId) -> Run | None:
+        query = "SELECT project_id, branch, commit, status, error_message, started_at, finished_at FROM analysis_run WHERE id = $1"
         row = await self.db.fetchrow(query, run_id)
         if row is None:
             return None
-        try:
-            status = Status(row['status'])
-        except ValueError:
-            return None
-        return status, row['error_message']
-
+        return Run.from_db_row(run_id, row)
+        
 
 def get_run_repository(db: Connection = Depends(get_db))-> RunRepository:
     return RunRepository(db)

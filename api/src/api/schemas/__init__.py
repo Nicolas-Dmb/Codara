@@ -3,7 +3,6 @@ from .errors import (
     RepositoryNotFoundError,
     UnsupportedRepositoryProvider,
     RegisterNewRunError,
-    RunAlreadyExistsError,
 )
 
 __all__ = [
@@ -14,5 +13,4 @@ __all__ = [
     "RepositoryNotFoundError",
     "UnsupportedRepositoryProvider",
     "RegisterNewRunError",
-    "RunAlreadyExistsError",
 ]
