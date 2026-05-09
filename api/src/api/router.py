@@ -24,3 +24,18 @@ async def analyse(
         message="Analysis request received.",
         run=RunResponse.model_validate(run),
     )
+
+@router.get(
+    "/graph/{run_id}/symbols",
+    response_model=RunResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_symbols(
+    run_id: str,
+    service: AnalyseService = Depends(get_analyse_service),
+) -> RunResponse:
+    """
+        Endpoint to get a run by its id.
+    """
+    run = await service.get_run(run_id)
+    return RunResponse.model_validate(run)
