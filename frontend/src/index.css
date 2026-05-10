@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "GeneralSans";
+  src: url("/fonts/GeneralSans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GeneralSans";
+  src: url("/fonts/GeneralSans-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plein";
+  src: url("/fonts/Plein-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plein";
+  src: url("/fonts/Plein-LightItalic.woff2") format("woff2");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plein";
+  src: url("/fonts/Plein-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Plein", system-ui, sans-serif;
+  --font-heading: "GeneralSans", system-ui, sans-serif;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-primary: #a54201;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-white);
+    color: var(--color-black);
+    font-family: var(--font-sans);
+    font-size: 20px;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  b,
+  strong {
+    font-weight: 700;
+  }
+}
+
+@utility text-h1 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+@utility text-h2 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 24px;
+}
+
+@utility text-h3 {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 20px;
+}
