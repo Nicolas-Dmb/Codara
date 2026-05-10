@@ -29,6 +29,7 @@ class AnalyseService:
         self.project_repository = project_repository
         self.codebase_repository = codebase_repository
 
+
     async def analyse(self, analyse_request: AnalyseRequest) -> Run:
         """Generate Run and Project models"""
         url = analyse_request.build_clone_url()
@@ -76,5 +77,6 @@ def get_analyse_service(
     run_repo: RunRepository = Depends(get_run_repository),
     project_repo: ProjectRepository = Depends(get_project_repository),
     codebase_repo: CodebaseRepository = Depends(get_codebase_repository),
+
 ) -> AnalyseService:
     return AnalyseService(run_repo, project_repo, codebase_repo)

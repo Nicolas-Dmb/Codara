@@ -26,3 +26,15 @@ class StatusError(RunError):
 class RegisterNewRunError(RunError):
     """Raised when there is an error while registering a new run or new project."""
     pass
+
+class RunNotFoundError(RunError):
+    """Raised when a run is not found."""
+    pass
+
+class RunNotDoneError(RunError):
+    """Raised when a run is not done yet."""
+    pass
+
+class RunIdFormatError(RunError):
+    """Raised when the run_id format is invalid."""
+    pass

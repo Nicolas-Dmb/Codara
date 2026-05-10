@@ -10,11 +10,11 @@ class SymbolKind(Enum):
     Function = "function"
     Method = "method"
 
-
+    def __str__(self):
+        return self.value
 
 class SymbolId(str):
-    "module_id: &ModuleId, kind: &SymbolKind, name: &str, start_line: usize"
-
+    
     def __new__(cls, module_id: ModuleId, kind: SymbolKind, name: str, start_line: int):
         return super().__new__(cls, f"{module_id}:{kind}:{name}:{start_line}")
     

@@ -3,10 +3,14 @@ import logging
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from api.src.api.schemas.errors import RunIdFormatError
+
 from ..schemas import (
     RegisterNewRunError,
     RepositoryNotFoundError,
     UnsupportedRepositoryProvider,
+    RunNotFoundError,
+    RunNotDoneError
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +31,15 @@ async def repository_not_found_handler(_: Request, exc: Exception) -> JSONRespon
 async def run_already_exists_handler(_: Request, exc: Exception) -> JSONResponse:
     return _error(status.HTTP_409_CONFLICT, str(exc))
 
+async def run_not_found_handler(_: Request, exc: Exception) -> JSONResponse:
+    return _error(status.HTTP_404_NOT_FOUND, str(exc))
+
+async def run_not_done_handler(_: Request, exc: Exception) -> JSONResponse:
+    return _error(status.HTTP_409_CONFLICT, str(exc))
+
+async def run_id_format_handler(_: Request, exc: Exception) -> JSONResponse:
+    return _error(status.HTTP_400_BAD_REQUEST, str(exc))
+
 
 async def register_new_run_handler(_: Request, exc: Exception) -> JSONResponse:
     logger.exception("Failed to register new run", exc_info=exc)
@@ -37,3 +50,6 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(UnsupportedRepositoryProvider, unsupported_provider_handler)
     app.add_exception_handler(RepositoryNotFoundError, repository_not_found_handler)
     app.add_exception_handler(RegisterNewRunError, register_new_run_handler)
+    app.add_exception_handler(RunNotFoundError, run_not_found_handler)
+    app.add_exception_handler(RunNotDoneError, run_not_done_handler)
+    app.add_exception_handler(RunIdFormatError, run_id_format_handler)
