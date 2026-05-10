@@ -2,10 +2,9 @@ from asyncpg import Connection
 from fastapi import Depends
 from typing import List
 
-from api.src.api.core.db import get_db
-from api.src.api.models.run import RunId
+from ..core import get_db
 
-from ..models import Symbol
+from ..models import Symbol, RunId
 
 
 class SymbolRepository:

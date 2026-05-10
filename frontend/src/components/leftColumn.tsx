@@ -1,13 +1,10 @@
 import columnArrow from "../assets/images/columnArrow.svg";
 import useColumn from "../hooks/useColumn";
-import useAnalyseModal from "../hooks/useAnalyseModal";
-import AnalyseModal from "./analyseModal";
+import { AnalyseModal, useAnalyseModal } from "../features/analyse";
 
 export default function LeftColumn() {
     const { isOpen, toggleColumn } = useColumn();
-    const analyseModal = useAnalyseModal({
-        onSubmit: (analyse) => console.log("AnalyseRequest", analyse),
-    });
+    const analyseModal = useAnalyseModal();
 
     return (
         <div
@@ -26,6 +23,9 @@ export default function LeftColumn() {
                 onSubmit={analyseModal.submit}
                 analyse={analyseModal.analyse}
                 updateField={analyseModal.updateField}
+                isPending={analyseModal.isPending}
+                error={analyseModal.error}
+                validationErrors={analyseModal.validationErrors}
             />
         </div>
     );

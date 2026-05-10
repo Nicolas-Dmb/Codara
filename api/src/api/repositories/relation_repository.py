@@ -5,7 +5,7 @@ from typing import List
 from asyncpg import Connection
 from fastapi import Depends
 
-from api.src.api.core.db import get_db
+from ..core import get_db
 
 from ..models import RunId, Relation
 
