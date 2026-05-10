@@ -3,6 +3,7 @@ from .project import ProjectId
 from enum import Enum
 from datetime import datetime
 from typing import Optional, Any
+from ..schemas import RunIdFormatError
 
 
 class RunId(str):
@@ -10,6 +11,17 @@ class RunId(str):
 
     def __new__(cls, project_id: ProjectId, commit: str):
         return super().__new__(cls, f"{project_id}:{commit}")
+
+    @classmethod
+    def from_str(cls, run_id_str: str) -> "RunId":
+        if len(run_id_str.split(":")) != 3:          
+            raise RunIdFormatError(
+                f"Invalid run_id format: expected 'namespace:project:commit', got '{run_id_str}'"                                                               
+            )                   
+        namespace, project_name, commit = run_id_str.split(":")
+        project_id = ProjectId(namespace, project_name)
+        return cls(project_id, commit)
+
 
 
 class Status(Enum):

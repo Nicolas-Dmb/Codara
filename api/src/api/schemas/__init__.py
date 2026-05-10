@@ -3,7 +3,11 @@ from .errors import (
     RepositoryNotFoundError,
     UnsupportedRepositoryProvider,
     RegisterNewRunError,
+    RunNotFoundError,
+    RunNotDoneError,
+    RunIdFormatError
 )
+from .graph import SymbolGraph, SymbolResponse, RelationResponse
 
 __all__ = [
     "AnalyseRequest",
@@ -13,4 +17,10 @@ __all__ = [
     "RepositoryNotFoundError",
     "UnsupportedRepositoryProvider",
     "RegisterNewRunError",
+    "SymbolGraph",
+    "SymbolResponse",
+    "RelationResponse",
+    "RunNotFoundError",
+    "RunNotDoneError",
+    "RunIdFormatError"
 ]
