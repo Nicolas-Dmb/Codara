@@ -2,9 +2,8 @@ import asyncio
 
 from fastapi import Depends
 
-from api.src.api.repositories.run_repository import RunRepository, get_run_repository
-from api.src.api.schemas import RunNotFoundError, RunNotDoneError
-from ..repositories import SymbolRepository, RelationRepository, get_symbol_repository, get_relation_repository
+from ..schemas import RunNotFoundError, RunNotDoneError
+from ..repositories import SymbolRepository, RelationRepository, get_symbol_repository, get_relation_repository, RunRepository, get_run_repository
 from ..models import RunId, Symbol, Relation, Status
 from typing import Tuple, List 
 

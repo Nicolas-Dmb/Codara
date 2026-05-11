@@ -1,4 +1,4 @@
-from api.src.api.models.project import ProjectId
+from ..models import ProjectId
 
 
 class ModuleId(str):

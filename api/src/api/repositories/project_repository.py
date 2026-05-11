@@ -11,12 +11,12 @@ class ProjectRepository:
         self.db = db
 
     async def is_already_register(self, project_id: str) -> bool:
-        query = "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1)"
+        query = "SELECT EXISTS(SELECT 1 FROM project WHERE id = $1)"
         return bool(await self.db.fetchval(query, project_id))
     
     async def save(self, project: Project):
         query = """
-        INSERT INTO projects (id, name, repo_url, branch)
+        INSERT INTO project (id, name, repo_url, branch)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (id) DO NOTHING
         """

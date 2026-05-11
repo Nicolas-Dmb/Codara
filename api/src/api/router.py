@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, status
 
-from api.src.api.schemas.graph import SymbolGraph
+from .schemas import SymbolGraph
 
 from .schemas import AnalyseRequest, AnalyseResponse, RunResponse, SymbolResponse, RelationResponse
 from .services import AnalyseService, get_analyse_service, GraphService, get_graph_service
 from .models import RunId
+
 
 router = APIRouter()
 
