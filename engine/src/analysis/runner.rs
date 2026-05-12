@@ -15,8 +15,11 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     let commit = run.commit.clone();
     let mut lifecycle = analysis::run_lifecycle::RunLifecycle::new(run_repo, run);
 
+    let start = std::time::Instant::now();
+    
+
     // Step 0: request the project details from the database
-    info!("Fetching project details for project {}", project_id);
+    info!("Fetching project details for project {}, time: {:?}", project_id, start.elapsed());
     let project = match project_repo.find_by_id(&project_id).await{
         Ok(project) => project,
         Err(e) => {
@@ -26,7 +29,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     };
 
     // Step 1: Clone the repository into a temporary directory
-    info!("Cloning repository {} (branch {})", project.id, project.branch);
+    info!("Cloning repository {} (branch {}), time: {:?}", project.id, project.branch, start.elapsed());
     let tmp_dir = match TempDir::new() {
         Ok(dir) => dir,
         Err(e) => {
@@ -41,7 +44,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     }
 
     // Step 2: Walk the repository and extract modules
-    info!("Walking repository and extracting modules");
+    info!("Walking repository and extracting modules, time: {:?}", start.elapsed());
     let adapters_registry = analysis::connector::AdapterRegistry::new();
     let walk_result = analysis::walker::walk(
         tmp_dir.path(),
@@ -55,7 +58,7 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     let is_partial_success = walk_result.as_ref().unwrap().has_retryables();
 
     // Step 3: Store the extracted modules in the database
-    info!("Storing extracted modules in the database");
+    info!("Storing extracted modules in the database, time: {:?}", start.elapsed());
     let adapter = analysis::raw_adapter::RawAdapter::new(analysis_repo, project.id.clone(), run_id.clone());
     let convert_result = adapter.convert_and_store(walk_result.unwrap()).await;
     if let Err(e) = convert_result {
@@ -66,10 +69,10 @@ pub async fn run_analysis<A: AnalysisRepository, R: RunRepository, P: ProjectRep
     // Step 4: Mark the run as completed
     if is_partial_success {
         lifecycle.mark_as_partial_success().await.expect("Failed to mark run as partially successful");
-        info!("Run completed with partial success due to retryable issues");
+        info!("Run completed with partial success due to retryable issues, end time: {:?}", start.elapsed());
     } else {
         lifecycle.mark_as_done().await.expect("Failed to mark run as successful");
-        info!("Run completed successfully");
+        info!("Run completed successfully, end time: {:?}", start.elapsed());
     }
 
 }

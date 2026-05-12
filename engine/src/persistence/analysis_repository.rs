@@ -1,5 +1,5 @@
 use sqlx::Postgres;
-use crate::model::{AnalysisWarning, Module, Relation, RetryableIssue, ServiceError, SourceCodeIssue, Symbol, run};
+use crate::model::{AnalysisWarning, Module, Relation, RetryableIssue, ServiceError, SourceCodeIssue, Symbol};
 
 pub trait AnalysisRepository {
     async fn store_batch(
@@ -27,18 +27,27 @@ impl SqlxAnalysisRepository {
         tx: &mut sqlx::Transaction<'_, Postgres>,
         modules: &[Module],
     ) -> Result<(), ServiceError> {
-        for module in modules {
-            sqlx::query(
-                "INSERT INTO modules (id, run_id, relative_path, name) VALUES ($1, $2, $3, $4)"
+        let ids: Vec<_> = modules.iter().map(|m| m.id.to_string()).collect();
+        let run_ids: Vec<_> = modules.iter().map(|m| m.run_id.to_string()).collect();
+        let relative_paths: Vec<_> = modules.iter().map(|m| &m.relative_path).collect();
+        let names: Vec<_> = modules.iter().map(|m| &m.name).collect();
+
+        sqlx::query(
+            r#"INSERT INTO module (id, run_id, relative_path, name) SELECT * FROM UNNEST(
+                    $1::text[],
+                    $2::text[],
+                    $3::text[],
+                    $4::text[]
+                )"#
             )
-            .bind(module.id.to_string())
-            .bind(module.run_id.to_string())
-            .bind(&module.relative_path)
-            .bind(&module.name)
+            .bind(&ids)
+            .bind(&run_ids)
+            .bind(&relative_paths)
+            .bind(&names)
             .execute(&mut **tx)
             .await
             .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
-        }
+
         Ok(())
     }
 
@@ -46,24 +55,48 @@ impl SqlxAnalysisRepository {
         tx: &mut sqlx::Transaction<'_, Postgres>,
         symbols: &[Symbol],
     ) -> Result<(), ServiceError> {
-        for symbol in symbols {
-            sqlx::query(
-                "INSERT INTO symbols (id, module_id, run_id, parent_symbol_id, name, kind, doc, location, start_line, end_line) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
-            )
-            .bind(symbol.id.to_string())
-            .bind(symbol.module_id.to_string())
-            .bind(symbol.run_id.to_string())
-            .bind(symbol.parent_symbol_id.as_ref().map(|id| id.to_string()))
-            .bind(&symbol.name)
-            .bind(symbol.kind.to_string())
-            .bind(&symbol.doc)
-            .bind(&symbol.location)
-            .bind(symbol.start_line as i64)
-            .bind(symbol.end_line as i64)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
-        }
+        let ids: Vec<String> = symbols.iter().map(|s| s.id.to_string()).collect();
+        let module_ids: Vec<String> = symbols.iter().map(|s| s.module_id.to_string()).collect();
+        let run_ids: Vec<String> = symbols.iter().map(|s| s.run_id.to_string()).collect();
+        let parent_symbol_ids: Vec<Option<String>> = symbols
+            .iter()
+            .map(|s| s.parent_symbol_id.as_ref().map(|id| id.to_string()))
+            .collect();
+        let names: Vec<&str> = symbols.iter().map(|s| s.name.as_str()).collect();
+        let kinds: Vec<String> = symbols.iter().map(|s| s.kind.to_string()).collect();
+        let docs: Vec<&str> = symbols.iter().map(|s| s.doc.as_str()).collect();
+        let locations: Vec<&str> = symbols.iter().map(|s| s.location.as_str()).collect();
+        let start_lines: Vec<i64> = symbols.iter().map(|s| s.start_line as i64).collect();
+        let end_lines: Vec<i64> = symbols.iter().map(|s| s.end_line as i64).collect();
+
+        sqlx::query(
+            "INSERT INTO symbol (id, module_id, run_id, parent_symbol_id, name, kind, doc, location, start_line, end_line) SELECT * FROM UNNEST(
+                $1::text[],
+                $2::text[],
+                $3::text[],
+                $4::text[],
+                $5::text[],
+                $6::text[],
+                $7::text[],
+                $8::text[],
+                $9::int8[],
+                $10::int8[]
+            )"
+        )
+        .bind(&ids)
+        .bind(&module_ids)
+        .bind(&run_ids)
+        .bind(&parent_symbol_ids)
+        .bind(&names)
+        .bind(&kinds)
+        .bind(&docs)
+        .bind(&locations)
+        .bind(&start_lines)
+        .bind(&end_lines)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+
         Ok(())
     }
 
@@ -71,23 +104,48 @@ impl SqlxAnalysisRepository {
         tx: &mut sqlx::Transaction<'_, Postgres>,
         relations: &[Relation],
     ) -> Result<(), ServiceError> {
-        for relation in relations {
-            sqlx::query(
-                "INSERT INTO relations (id, module_id, run_id, parent_symbol_id, imported_name, source_path, target_symbol_id, kind, line) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-            )
-            .bind(relation.id.to_string())
-            .bind(relation.module_id.to_string())
-            .bind(relation.run_id.to_string())
-            .bind(relation.parent_symbol_id.as_ref().map(|id| id.to_string()))
-            .bind(&relation.imported_name)
-            .bind(&relation.source_path)
-            .bind(relation.target_symbol_id.as_ref().map(|id| id.to_string()))
-            .bind(relation.kind.to_string())
-            .bind(relation.line as i64)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
-        }
+        let ids: Vec<String> = relations.iter().map(|r| r.id.to_string()).collect();
+        let module_ids: Vec<String> = relations.iter().map(|r| r.module_id.to_string()).collect();
+        let run_ids: Vec<String> = relations.iter().map(|r| r.run_id.to_string()).collect();
+        let parent_symbol_ids: Vec<Option<String>> = relations
+            .iter()
+            .map(|r| r.parent_symbol_id.as_ref().map(|id| id.to_string()))
+            .collect();
+        let imported_names: Vec<&str> = relations.iter().map(|r| r.imported_name.as_str()).collect();
+        let source_paths: Vec<&str> = relations.iter().map(|r| r.source_path.as_str()).collect();
+        let target_symbol_ids: Vec<Option<String>> = relations
+            .iter()
+            .map(|r| r.target_symbol_id.as_ref().map(|id| id.to_string()))
+            .collect();
+        let kinds: Vec<String> = relations.iter().map(|r| r.kind.to_string()).collect();
+        let lines: Vec<i64> = relations.iter().map(|r| r.line as i64).collect();
+
+        sqlx::query(
+            "INSERT INTO relation (id, module_id, run_id, parent_symbol_id, imported_name, source_path, target_symbol_id, kind, line) SELECT * FROM UNNEST(
+                $1::text[],
+                $2::text[],
+                $3::text[],
+                $4::text[],
+                $5::text[],
+                $6::text[],
+                $7::text[],
+                $8::text[],
+                $9::int8[]
+            )"
+        )
+        .bind(&ids)
+        .bind(&module_ids)
+        .bind(&run_ids)
+        .bind(&parent_symbol_ids)
+        .bind(&imported_names)
+        .bind(&source_paths)
+        .bind(&target_symbol_ids)
+        .bind(&kinds)
+        .bind(&lines)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+
         Ok(())
     }
 
@@ -96,22 +154,32 @@ impl SqlxAnalysisRepository {
         run_id: &str,
         warnings: &[AnalysisWarning],
     ) -> Result<(), ServiceError> {
-        for warning in warnings {
-            let (error_kind, path) = match warning {
-                AnalysisWarning::UnsupportedFileType { path } => ("unsupported_file_type", path.as_str()),
-                AnalysisWarning::IgnoredFile { path } => ("ignored_file", path.as_str()),
-            };
+        let run_ids: Vec<&str> = warnings.iter().map(|_| run_id).collect();
+        let kinds: Vec<&str> = warnings
+            .iter()
+            .map(|w| match w {
+                AnalysisWarning::UnsupportedFileType { .. } => "unsupported_file_type",
+                AnalysisWarning::IgnoredFile { .. } => "ignored_file",
+            })
+            .collect();
+        let paths: Vec<&str> = warnings
+            .iter()
+            .map(|w| match w {
+                AnalysisWarning::UnsupportedFileType { path } => path.as_str(),
+                AnalysisWarning::IgnoredFile { path } => path.as_str(),
+            })
+            .collect();
 
-            sqlx::query(
-                "INSERT INTO analysis_warning (run_id, kind, path) VALUES ($1, $2, $3)"
-            )
-            .bind(run_id)
-            .bind(error_kind)
-            .bind(path)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
-        }
+        sqlx::query(
+            "INSERT INTO analysis_warning (run_id, kind, path) SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[])"
+        )
+        .bind(&run_ids)
+        .bind(&kinds)
+        .bind(&paths)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+
         Ok(())
     }
 
@@ -120,25 +188,46 @@ impl SqlxAnalysisRepository {
         run_id: &str,
         issues: &[RetryableIssue],
     ) -> Result<(), ServiceError> {
-        for issue in issues {
-            let (error_kind, path, reason) = match issue {
-                RetryableIssue::UnreadableDirectory { path, reason } => ("unreadable_directory", path.as_str(), reason.as_str()),
-                RetryableIssue::UnreadableFile { path, reason } => ("unreadable_file", path.as_str(), reason.as_str()),
-                RetryableIssue::AdapterFailed { path, reason } => ("adapter_failed", path.as_str(), reason.as_str()),
-                RetryableIssue::UnresolvedImport { path, import_name } => ("unresolved_import", path.as_str(), import_name.as_str()),
-            };
+        let run_ids: Vec<&str> = issues.iter().map(|_| run_id).collect();
+        let kinds: Vec<&str> = issues
+            .iter()
+            .map(|i| match i {
+                RetryableIssue::UnreadableDirectory { .. } => "unreadable_directory",
+                RetryableIssue::UnreadableFile { .. } => "unreadable_file",
+                RetryableIssue::AdapterFailed { .. } => "adapter_failed",
+                RetryableIssue::UnresolvedImport { .. } => "unresolved_import",
+            })
+            .collect();
+        let paths: Vec<&str> = issues
+            .iter()
+            .map(|i| match i {
+                RetryableIssue::UnreadableDirectory { path, .. } => path.as_str(),
+                RetryableIssue::UnreadableFile { path, .. } => path.as_str(),
+                RetryableIssue::AdapterFailed { path, .. } => path.as_str(),
+                RetryableIssue::UnresolvedImport { path, .. } => path.as_str(),
+            })
+            .collect();
+        let reasons: Vec<&str> = issues
+            .iter()
+            .map(|i| match i {
+                RetryableIssue::UnreadableDirectory { reason, .. } => reason.as_str(),
+                RetryableIssue::UnreadableFile { reason, .. } => reason.as_str(),
+                RetryableIssue::AdapterFailed { reason, .. } => reason.as_str(),
+                RetryableIssue::UnresolvedImport { import_name, .. } => import_name.as_str(),
+            })
+            .collect();
 
-            sqlx::query(
-                "INSERT INTO retryable_issue (run_id, kind, path, reason) VALUES ($1, $2, $3, $4)"
-            )
-            .bind(run_id)
-            .bind(error_kind)
-            .bind(path)
-            .bind(reason)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
-        }
+        sqlx::query(
+            "INSERT INTO retryable_issue (run_id, kind, path, reason) SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[])"
+        )
+        .bind(&run_ids)
+        .bind(&kinds)
+        .bind(&paths)
+        .bind(&reasons)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+
         Ok(())
     }
 
@@ -147,22 +236,37 @@ impl SqlxAnalysisRepository {
         run_id: &str,
         issues: &[SourceCodeIssue],
     ) -> Result<(), ServiceError> {
-        for issue in issues {
-            let (error_kind, path, reason) = match issue {
-                SourceCodeIssue::InvalidSyntax { path, reason } => ("invalid_syntax", path.as_str(), reason.as_str()),
-            };
+        let run_ids: Vec<&str> = issues.iter().map(|_| run_id).collect();
+        let kinds: Vec<&str> = issues
+            .iter()
+            .map(|i| match i {
+                SourceCodeIssue::InvalidSyntax { .. } => "invalid_syntax",
+            })
+            .collect();
+        let paths: Vec<&str> = issues
+            .iter()
+            .map(|i| match i {
+                SourceCodeIssue::InvalidSyntax { path, .. } => path.as_str(),
+            })
+            .collect();
+        let reasons: Vec<&str> = issues
+            .iter()
+            .map(|i| match i {
+                SourceCodeIssue::InvalidSyntax { reason, .. } => reason.as_str(),
+            })
+            .collect();
 
-            sqlx::query(
-                "INSERT INTO source_code_issue (run_id, kind, path, reason) VALUES ($1, $2, $3, $4)"
-            )
-            .bind(run_id)
-            .bind(error_kind)
-            .bind(path)
-            .bind(reason)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
-        }
+        sqlx::query(
+            "INSERT INTO source_code_issue (run_id, kind, path, reason) SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[])"
+        )
+        .bind(&run_ids)
+        .bind(&kinds)
+        .bind(&paths)
+        .bind(&reasons)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| ServiceError::DatabaseRequestFailed(e.to_string()))?;
+
         Ok(())
     }
 }
