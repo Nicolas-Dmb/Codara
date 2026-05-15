@@ -30,6 +30,24 @@ async def analyse(
     )
 
 @router.get(
+    "/analyse/{run_id}",
+    response_model=AnalyseResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_analyse_status(
+    run_id: str,
+    service: AnalyseService = Depends(get_analyse_service),
+) -> AnalyseResponse:
+    """
+        Endpoint to get the status of an analysis run.
+    """
+    run = await service.get_run(RunId.from_str(run_id))
+    return AnalyseResponse(
+        message="Analysis status retrieved.",
+        run=RunResponse.model_validate(run),
+    )
+
+@router.get(
     "/graph/{run_id}",
     response_model=SymbolGraph,
     status_code=status.HTTP_200_OK,

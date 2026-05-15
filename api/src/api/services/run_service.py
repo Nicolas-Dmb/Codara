@@ -2,7 +2,7 @@ from typing import Tuple
 
 from fastapi import Depends
 
-from ..models import Project, ProjectId, Run
+from ..models import Project, ProjectId, Run, RunId
 from ..repositories import (
     CodebaseRepository,
     ProjectRepository,
@@ -15,6 +15,7 @@ from ..schemas import (
     AnalyseRequest,
     RegisterNewRunError,
     RepositoryNotFoundError,
+    RunNotFoundError,
 )
 
 
@@ -50,6 +51,13 @@ class AnalyseService:
             return await self.register_run(run, project)
         except Exception as e:
             raise RegisterNewRunError(f"Failed to register new run: {e}") from e
+        
+    async def get_run(self, run_id: RunId) -> Run:
+        run = await self.run_repository.get_run(run_id)
+        if run is None:
+            raise RunNotFoundError(f"Run with id {run_id} not found")
+        return run
+
 
     async def get_last_commit(self, request: AnalyseRequest) -> str | None:
         return await self.codebase_repository.get_last_commit(

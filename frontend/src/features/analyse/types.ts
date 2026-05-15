@@ -24,3 +24,7 @@ export interface AnalyseResponse {
     message: string;
     run: RunResponse;
 }
+
+export interface RunId {
+    runId: string;
+}
