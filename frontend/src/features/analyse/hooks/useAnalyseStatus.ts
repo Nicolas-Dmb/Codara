@@ -14,8 +14,9 @@ export default function useAnalyseStatus(runId: string| undefined) {
             const status = query.state.data?.run.status;
 
             if (
-            status === "SUCCESS" ||
-            status === "FAILED"
+            status === "done" ||
+            status === "failed" || 
+            status === "partial_success"
             ) {
             return false;
             }

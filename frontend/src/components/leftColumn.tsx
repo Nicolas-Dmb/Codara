@@ -1,10 +1,14 @@
 import columnArrow from "../assets/images/columnArrow.svg";
 import useColumn from "../hooks/useColumn";
-import { AnalyseModal, useAnalyseModal } from "../features/analyse";
+import { AnalyseModal, useAnalyseModal, useAnalyseStatus } from "../features/analyse";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { AnalyseResponse } from "../features/analyse/types";
 
 export default function LeftColumn() {
     const { isOpen, toggleColumn } = useColumn();
+
     const analyseModal = useAnalyseModal();
+    const { analysisQuery } = useAnalyseStatus(analyseModal.currentRunId);
 
     return (
         <div
@@ -15,7 +19,7 @@ export default function LeftColumn() {
         >
             {topColumn({ isOpen, toggleColumn })}
             {ProjectsPart({ isOpen })}
-            {AnalysisPart({ isOpen, onAddClick: analyseModal.open })}
+            {AnalysisPart({ isOpen, onAddClick: analyseModal.open, analysisQuery })}
 
             <AnalyseModal
                 isOpen={analyseModal.isOpen}
@@ -98,9 +102,11 @@ function ProjectsPart({ isOpen }: SubColumnProps) {
 
 interface AnalysisPartProps extends SubColumnProps {
     onAddClick: () => void;
+    analysisQuery: UseQueryResult<AnalyseResponse, Error>;
 }
 
-function AnalysisPart({ isOpen, onAddClick }: AnalysisPartProps) {
+function AnalysisPart({ isOpen, onAddClick, analysisQuery }: AnalysisPartProps) {
+    const run = analysisQuery.data?.run;
     return (
         <div
             className={
@@ -125,6 +131,24 @@ function AnalysisPart({ isOpen, onAddClick }: AnalysisPartProps) {
                 >
                     +
                 </button>
+            </div>
+            <div className="flex flex-col gap-2">
+                {run && (
+                    <div className="flex justify-between p-2" key={run.id}>
+                        <p className="font-small">{run.branch}</p>
+                        {run.status === "pending" && (
+                            <p className="text-yellow-500 font-medium">{run.status}</p>
+                        )}
+                        {run.status === "running" && (
+                            <p className="text-blue-500 font-medium">{run.status}</p>
+                        )}
+                        {run.status === "done" && (  
+                            <p className="text-green-500 font-medium">{run.status}</p>
+                        )}{ run.status === "failed" && 
+                            <p className="text-red-500 font-medium">{run.status}</p>
+                        }
+                    </div>
+                )}
             </div>
         </div>
     )

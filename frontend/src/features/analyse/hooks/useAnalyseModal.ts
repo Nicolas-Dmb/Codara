@@ -24,6 +24,7 @@ export default function useAnalyseModal() {
     const [analyse, setAnalyse] = useState<AnalyseRequest>(initialAnalyse);
     const [validationErrors, setValidationErrors] = useState<AnalyseValidationErrors>({});
     const mutation = useCreateAnalyse();
+    const [currentRunId, setCurrentRunId] = useState<string | undefined>();
 
     const open = () => setIsOpen(true);
 
@@ -52,7 +53,10 @@ export default function useAnalyseModal() {
         }
         setValidationErrors({});
         mutation.mutate(analyse, {
-            onSuccess: () => close(),
+            onSuccess: (data) => {
+                setCurrentRunId(data.run.id); 
+                close()
+            },
         });
     };
 
@@ -66,5 +70,6 @@ export default function useAnalyseModal() {
         isPending: mutation.isPending,
         error: mutation.error,
         validationErrors,
+        currentRunId,
     };
 }
