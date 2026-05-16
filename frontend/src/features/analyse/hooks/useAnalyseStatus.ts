@@ -1,29 +1,36 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { analyseRepository } from "../repository";
+import type { Project } from "../../project";
+import type { AnalyseResponse, AnalyseStatus, RunResponse } from "../types";
 
-export default function useAnalyseStatus(runId: string| undefined) {
+const ACTIVE: AnalyseStatus[] = ["pending", "running"];
+const isActive = (s: AnalyseStatus) => ACTIVE.includes(s);
 
-    const analysisQuery = useQuery({
-        queryKey: ["runId",  runId],
+export default function useAnalyseStatus(project: Project | null) {
+    const queryClient = useQueryClient();
+    const activeRuns = (project?.runs ?? []).filter((r) => isActive(r.status));
 
-        queryFn: async () =>  await analyseRepository.getState(runId!),
-
-        enabled: !!runId,
-
-        refetchInterval: (query) => {
-            const status = query.state.data?.run.status;
-
-            if (
-            status === "done" ||
-            status === "failed" || 
-            status === "partial_success"
-            ) {
-            return false;
-            }
-
-            return 60_000;
-        },
+    const queries = useQueries({
+        queries: activeRuns.map((run) => ({
+            queryKey: ["run", run.id] as const,
+            queryFn: () => analyseRepository.getState(run.id),
+            initialData: { message: "", run } as AnalyseResponse,
+            refetchInterval: (q: { state: { data?: AnalyseResponse } }) => {
+                const s = q.state.data?.run.status;
+                if (!s) return 60_000;
+                if (!isActive(s)) {
+                    queryClient.invalidateQueries({ queryKey: ["projects"] });
+                    return false;
+                }
+                return 60_000;
+            },
+        })),
     });
 
-    return { analysisQuery };
+    const polledById = new Map<string, RunResponse>(
+        queries.map((q, i) => [activeRuns[i].id, q.data?.run ?? activeRuns[i]])
+    );
+    const runs = (project?.runs ?? []).map((r) => polledById.get(r.id) ?? r);
+
+    return { runs, queries };
 }

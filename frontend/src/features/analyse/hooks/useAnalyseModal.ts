@@ -6,6 +6,7 @@ import {
     hasValidationErrors,
     type AnalyseValidationErrors,
 } from "../validation";
+import { useProjects } from "../../project";
 
 export type UpdateAnalyseField = <K extends keyof AnalyseRequest>(
     key: K,
@@ -24,7 +25,7 @@ export default function useAnalyseModal() {
     const [analyse, setAnalyse] = useState<AnalyseRequest>(initialAnalyse);
     const [validationErrors, setValidationErrors] = useState<AnalyseValidationErrors>({});
     const mutation = useCreateAnalyse();
-    const [currentRunId, setCurrentRunId] = useState<string | undefined>();
+    const { data: projects } = useProjects();
 
     const open = () => setIsOpen(true);
 
@@ -45,19 +46,36 @@ export default function useAnalyseModal() {
         });
     };
 
+    const isAlreadyAnalysing = () => {
+        for (const project of projects ?? []) {
+            if (
+                project.repo_url.includes(analyse.provider) &&
+                project.repo_url.includes(analyse.project_name) &&
+                project.repo_url.includes(analyse.namespace)
+            ) {
+                const run = project.runs.find(
+                    (r) =>
+                        r.branch === analyse.branch &&
+                        (r.status === "pending" || r.status === "running")
+                );
+                if (run) return true;
+            }
+        }
+        return false;
+    };
+
     const submit = () => {
+        if (isAlreadyAnalysing()) {
+            setValidationErrors({ branch: "This branch is already being analysed." });
+            return;
+        }
         const errors = validateAnalyseRequest(analyse);
         if (hasValidationErrors(errors)) {
             setValidationErrors(errors);
             return;
         }
         setValidationErrors({});
-        mutation.mutate(analyse, {
-            onSuccess: (data) => {
-                setCurrentRunId(data.run.id); 
-                close()
-            },
-        });
+        mutation.mutate(analyse, { onSuccess: close });
     };
 
     return {
@@ -70,6 +88,5 @@ export default function useAnalyseModal() {
         isPending: mutation.isPending,
         error: mutation.error,
         validationErrors,
-        currentRunId,
     };
 }

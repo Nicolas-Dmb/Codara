@@ -1,15 +1,16 @@
 import columnArrow from "../assets/images/columnArrow.svg";
 import useColumn from "../hooks/useColumn";
 import { AnalyseModal, useAnalyseModal, useAnalyseStatus } from "../features/analyse";
-import type { UseQueryResult } from "@tanstack/react-query";
-import type { AnalyseResponse } from "../features/analyse/types";
+import type { RunResponse } from "../features/analyse/types";
+import {useProjects} from "../features/project";
+import type {Project} from "../features/project";
 
 export default function LeftColumn() {
-    const { isOpen, toggleColumn } = useColumn();
-
+    const { isOpen, toggleColumn, selectedProject, setSelectedProject } = useColumn();
+    const queryProjects = useProjects();
     const analyseModal = useAnalyseModal();
-    const { analysisQuery } = useAnalyseStatus(analyseModal.currentRunId);
-
+    const { runs } = useAnalyseStatus(selectedProject);
+    
     return (
         <div
             className={
@@ -18,8 +19,8 @@ export default function LeftColumn() {
             }
         >
             {topColumn({ isOpen, toggleColumn })}
-            {ProjectsPart({ isOpen })}
-            {AnalysisPart({ isOpen, onAddClick: analyseModal.open, analysisQuery })}
+            {ProjectsPart({ isOpen, projects: queryProjects.data, setSelectedProject })}
+            {AnalysisPart({ isOpen, onAddClick: analyseModal.open, runs })}
 
             <AnalyseModal
                 isOpen={analyseModal.isOpen}
@@ -73,9 +74,11 @@ function topColumn({ isOpen, toggleColumn }: TopColumnProps) {
 
 interface SubColumnProps {
     isOpen: boolean;
+    projects: Project[] | undefined;
+    setSelectedProject: (project: Project | null) => void;
 }
 
-function ProjectsPart({ isOpen }: SubColumnProps) {
+function ProjectsPart({ isOpen, projects, setSelectedProject }: SubColumnProps) {
     return (
         <div
             className={
@@ -96,17 +99,31 @@ function ProjectsPart({ isOpen }: SubColumnProps) {
                 </div>
                 <button className="text-sm font-bold text-black hover:text-primary">+</button>
             </div>
+            {projects && projects.map((project) => (
+                <div onClick={() => setSelectedProject(project)} className="flex justify-between p-2" key={project.id}>
+                    <p className="font-small">{project.name}</p>
+                    <p className="text-gray-500 font-medium">{project.repo_url}</p>
+                </div>
+            ))}
         </div>
     )
 }
 
-interface AnalysisPartProps extends SubColumnProps {
+interface AnalysisPartProps {
+    isOpen: boolean;
     onAddClick: () => void;
-    analysisQuery: UseQueryResult<AnalyseResponse, Error>;
+    runs: RunResponse[];
 }
 
-function AnalysisPart({ isOpen, onAddClick, analysisQuery }: AnalysisPartProps) {
-    const run = analysisQuery.data?.run;
+const statusColor: Record<string, string> = {
+    pending: "text-yellow-500",
+    running: "text-blue-500",
+    done: "text-green-500",
+    failed: "text-red-500",
+    partial_success: "text-orange-500",
+};
+
+function AnalysisPart({ isOpen, onAddClick, runs }: AnalysisPartProps) {
     return (
         <div
             className={
@@ -133,22 +150,14 @@ function AnalysisPart({ isOpen, onAddClick, analysisQuery }: AnalysisPartProps) 
                 </button>
             </div>
             <div className="flex flex-col gap-2">
-                {run && (
+                {runs.map((run) => (
                     <div className="flex justify-between p-2" key={run.id}>
                         <p className="font-small">{run.branch}</p>
-                        {run.status === "pending" && (
-                            <p className="text-yellow-500 font-medium">{run.status}</p>
-                        )}
-                        {run.status === "running" && (
-                            <p className="text-blue-500 font-medium">{run.status}</p>
-                        )}
-                        {run.status === "done" && (  
-                            <p className="text-green-500 font-medium">{run.status}</p>
-                        )}{ run.status === "failed" && 
-                            <p className="text-red-500 font-medium">{run.status}</p>
-                        }
+                        <p className={`font-medium ${statusColor[run.status] ?? "text-gray-500"}`}>
+                            {run.status}
+                        </p>
                     </div>
-                )}
+                ))}
             </div>
         </div>
     )
