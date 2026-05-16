@@ -31,6 +31,11 @@ class RunRepository:
         if row is None:
             return None
         return Run.from_db_row(run_id, row)
+    
+    async def get_runs_by_project_id(self, project_id: str) -> list[Run]:
+        query = "SELECT id, project_id, branch, commit, status, error_message, started_at, finished_at FROM analysis_run WHERE project_id = $1"
+        rows = await self.db.fetch(query, project_id)
+        return [Run.from_db_row(row["id"], row) for row in rows]
         
 
 def get_run_repository(db: Connection = Depends(get_db))-> RunRepository:

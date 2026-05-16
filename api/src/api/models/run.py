@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .project import ProjectId
+from .project_id import ProjectId
 from enum import Enum
 from datetime import datetime
 from typing import Optional, Any

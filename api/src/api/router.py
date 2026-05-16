@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, status
 
 from .schemas import SymbolGraph
 
-from .schemas import AnalyseRequest, AnalyseResponse, RunResponse, SymbolResponse, RelationResponse
-from .services import AnalyseService, get_analyse_service, GraphService, get_graph_service
+from .schemas import AnalyseRequest, AnalyseResponse, RunResponse, SymbolResponse, RelationResponse, ProjectsResponse, ProjectResponse
+from .services import AnalyseService, get_analyse_service, GraphService, get_graph_service, ProjectService, get_project_service
 from .models import RunId
 
 
@@ -65,3 +65,16 @@ async def get_symbols(
         relations=[RelationResponse.model_validate(relation) for relation in relations],
     )
     
+
+@router.get(
+    "/projects",
+    status_code=status.HTTP_200_OK,
+)
+async def get_projects(
+    service: ProjectService = Depends(get_project_service),
+) -> ProjectsResponse:
+    projects = await service.get_projects_with_runs()
+    return ProjectsResponse(
+        message="Projects retrieved.",
+        projects=[ProjectResponse.model_validate(project) for project in projects]
+    )

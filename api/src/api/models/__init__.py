@@ -1,4 +1,5 @@
-from .project import Project, ProjectId
+from .project import Project
+from .project_id import ProjectId
 from .run import Run, RunId, Status
 from .symbol import Symbol, SymbolId, SymbolKind
 from .relation import Relation, RelationId, RelationKind
