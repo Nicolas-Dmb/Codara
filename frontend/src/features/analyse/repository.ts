@@ -6,4 +6,9 @@ export const analyseRepository = {
         const { data } = await api.post<AnalyseResponse>("/analyse", payload);
         return data;
     },
+
+    getState: async (runId: string): Promise<AnalyseResponse> => {
+        const { data } = await api.get<AnalyseResponse>(`/analyse/${runId}`);
+        return data;
+    }
 };

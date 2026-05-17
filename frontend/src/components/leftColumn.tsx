@@ -1,11 +1,16 @@
 import columnArrow from "../assets/images/columnArrow.svg";
 import useColumn from "../hooks/useColumn";
-import { AnalyseModal, useAnalyseModal } from "../features/analyse";
+import { AnalyseModal, useAnalyseModal, useAnalyseStatus } from "../features/analyse";
+import type { RunResponse } from "../features/analyse/types";
+import {useProjects} from "../features/project";
+import type {Project} from "../features/project";
 
 export default function LeftColumn() {
-    const { isOpen, toggleColumn } = useColumn();
+    const queryProjects = useProjects();
     const analyseModal = useAnalyseModal();
-
+    const { isOpen, toggleColumn, selectedProject, setSelectedProject } = useColumn();
+    const { runs } = useAnalyseStatus(selectedProject);
+    
     return (
         <div
             className={
@@ -14,8 +19,8 @@ export default function LeftColumn() {
             }
         >
             {topColumn({ isOpen, toggleColumn })}
-            {ProjectsPart({ isOpen })}
-            {AnalysisPart({ isOpen, onAddClick: analyseModal.open })}
+            {ProjectsPart({ isOpen, projects: queryProjects.data, setSelectedProject })}
+            {AnalysisPart({ isOpen, onAddClick: analyseModal.open, runs })}
 
             <AnalyseModal
                 isOpen={analyseModal.isOpen}
@@ -69,9 +74,11 @@ function topColumn({ isOpen, toggleColumn }: TopColumnProps) {
 
 interface SubColumnProps {
     isOpen: boolean;
+    projects: Project[] | undefined;
+    setSelectedProject: (project: Project | null) => void;
 }
 
-function ProjectsPart({ isOpen }: SubColumnProps) {
+function ProjectsPart({ isOpen, projects, setSelectedProject }: SubColumnProps) {
     return (
         <div
             className={
@@ -92,15 +99,30 @@ function ProjectsPart({ isOpen }: SubColumnProps) {
                 </div>
                 <button className="text-sm font-bold text-black hover:text-primary">+</button>
             </div>
+            {projects && projects.map((project) => (
+                <div onClick={() => setSelectedProject(project)} className="flex justify-between align-baseline p-2 cursor-pointer hover:bg-gray-100" key={project.id}>
+                    <p className="text-sm">{project.name}</p>
+                </div>
+            ))}
         </div>
     )
 }
 
-interface AnalysisPartProps extends SubColumnProps {
+interface AnalysisPartProps {
+    isOpen: boolean;
     onAddClick: () => void;
+    runs: RunResponse[];
 }
 
-function AnalysisPart({ isOpen, onAddClick }: AnalysisPartProps) {
+const statusColor: Record<string, string> = {
+    pending: "text-yellow-500",
+    processing: "text-blue-500",
+    done: "text-green-500",
+    failed: "text-red-500",
+    partial_success: "text-orange-500",
+};
+
+function AnalysisPart({ isOpen, onAddClick, runs }: AnalysisPartProps) {
     return (
         <div
             className={
@@ -125,6 +147,16 @@ function AnalysisPart({ isOpen, onAddClick }: AnalysisPartProps) {
                 >
                     +
                 </button>
+            </div>
+            <div className="flex flex-col gap-2">
+                {runs.map((run) => (
+                    <div className="flex justify-between p-2 cursor-pointer hover:bg-gray-100" key={run.id}>
+                        <p className="text-xs">{run.branch}</p>
+                        <p className={`text-xs font-medium ${statusColor[run.status] ?? "text-gray-500"}`}>
+                            {run.status}
+                        </p>
+                    </div>
+                ))}
             </div>
         </div>
     )

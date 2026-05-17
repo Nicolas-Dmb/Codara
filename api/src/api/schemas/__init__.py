@@ -8,6 +8,7 @@ from .errors import (
     RunIdFormatError
 )
 from .graph import SymbolGraph, SymbolResponse, RelationResponse
+from .project import ProjectResponse, ProjectsResponse
 
 __all__ = [
     "AnalyseRequest",
@@ -22,5 +23,7 @@ __all__ = [
     "RelationResponse",
     "RunNotFoundError",
     "RunNotDoneError",
-    "RunIdFormatError"
+    "RunIdFormatError",
+    "ProjectResponse",
+    "ProjectsResponse",
 ]
