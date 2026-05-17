@@ -1,11 +1,9 @@
-import asyncio
-
 from fastapi import Depends
 
 from ..schemas import RunNotFoundError, RunNotDoneError
 from ..repositories import SymbolRepository, RelationRepository, get_symbol_repository, get_relation_repository, RunRepository, get_run_repository
 from ..models import RunId, Symbol, Relation, Status
-from typing import Tuple, List 
+from typing import Tuple, List
 
 
 class GraphService:
@@ -26,11 +24,9 @@ class GraphService:
             raise RunNotFoundError(f"Run with id {run_id} not found")
         if run.status not in (Status.Done, Status.PartialSuccess):
             raise RunNotDoneError(f"Run with id {run_id} is not done yet")
-        
-        symbols, relations = await asyncio.gather(                                              
-            self.symbol_repository.get_root_symbols(run_id),                                  
-            self.relation_repository.get_module_relations(run_id),  
-        )    
+
+        symbols = await self.symbol_repository.get_root_symbols(run_id)
+        relations = await self.relation_repository.get_module_relations(run_id)
 
         return symbols, relations
 

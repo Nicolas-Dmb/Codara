@@ -60,8 +60,8 @@ impl<A: AnalysisRepository> RawAdapter<A> {
     fn resolve_relation_target(&self, relations: Vec<Relation>, symbols: &[Symbol])-> Vec<Relation>{
         relations.into_iter().map(|mut r| {
             let mut imported_symbol_name = r.imported_name.clone();
-            if imported_symbol_name.contains("::"){
-                imported_symbol_name = imported_symbol_name.split("::").last().unwrap().to_string();
+            if imported_symbol_name.contains('/'){
+                imported_symbol_name = imported_symbol_name.split('/').last().unwrap().to_string();
             }
             let target_symbol_opt : Vec<&Symbol> = symbols.iter().filter(|s| s.name == imported_symbol_name).collect();
             if target_symbol_opt.is_empty() {
@@ -102,7 +102,7 @@ impl<A: AnalysisRepository> RawAdapter<A> {
 }
 
 fn imported_module_segments(imported_name: &str) -> Vec<&str> {
-    let module_path = imported_name.split("::").next().unwrap_or("");
+    let module_path = imported_name.split('/').next().unwrap_or("");
     module_path.split('.').filter(|s| !s.is_empty()).collect()
 }
 
@@ -402,7 +402,7 @@ mod tests {
 
     #[test]
     fn imported_module_segments_splits_module_path_on_dot() {
-        assert_eq!(imported_module_segments("foo.bar::Baz"), vec!["foo", "bar"]);
+        assert_eq!(imported_module_segments("foo.bar/Baz"), vec!["foo", "bar"]);
         assert_eq!(imported_module_segments("foo.bar"), vec!["foo", "bar"]);
         assert_eq!(imported_module_segments("os"), vec!["os"]);
         assert!(imported_module_segments("").is_empty());
@@ -443,7 +443,7 @@ mod tests {
         let rid = test_run_id(&test_project_id());
 
         let symbols = vec![make_symbol("dumps", "src/json.py", &rid)];
-        let relations = vec![make_relation("json::dumps", "src/main.py", &rid)];
+        let relations = vec![make_relation("json/dumps", "src/main.py", &rid)];
 
         let resolved = adapter.resolve_relation_target(relations, &symbols);
         assert_eq!(resolved.len(), 1);
@@ -459,7 +459,7 @@ mod tests {
         let rid = test_run_id(&test_project_id());
 
         let symbols = vec![make_symbol("dumps", "src/json.py", &rid)];
-        let relations = vec![make_relation("json::nonexistent", "src/main.py", &rid)];
+        let relations = vec![make_relation("json/nonexistent", "src/main.py", &rid)];
 
         let resolved = adapter.resolve_relation_target(relations, &symbols);
         assert_eq!(resolved.len(), 1);
@@ -475,7 +475,7 @@ mod tests {
             make_symbol("dumps", "src/pickle.py", &rid),
             make_symbol("dumps", "src/json.py", &rid),
         ];
-        let relations = vec![make_relation("json::dumps", "src/main.py", &rid)];
+        let relations = vec![make_relation("json/dumps", "src/main.py", &rid)];
 
         let resolved = adapter.resolve_relation_target(relations, &symbols);
         assert_eq!(resolved.len(), 1);
@@ -492,7 +492,7 @@ mod tests {
 
         let s_pickle = make_symbol("dumps", "src/pickle.py", &rid);
         let s_json = make_symbol("dumps", "src/json.py", &rid);
-        let relation = make_relation("json::dumps", "src/main.py", &rid);
+        let relation = make_relation("json/dumps", "src/main.py", &rid);
 
         let chosen = adapter.resolve_relation_conflicts(&relation, vec![&s_pickle, &s_json]);
         assert_eq!(chosen.location, "src/json.py");
@@ -503,12 +503,12 @@ mod tests {
         let adapter = make_adapter();
         let rid = test_run_id(&test_project_id());
 
-        // foo.bar::Baz → segments imported = ["foo", "bar"]
+        // foo.bar/Baz → segments imported = ["foo", "bar"]
         // src/foo/bar.py → match les 2 segments (score 2)
         // src/other/bar.py → match 1 segment (score 1)
         let s_other = make_symbol("Baz", "src/other/bar.py", &rid);
         let s_target = make_symbol("Baz", "src/foo/bar.py", &rid);
-        let relation = make_relation("foo.bar::Baz", "src/main.py", &rid);
+        let relation = make_relation("foo.bar/Baz", "src/main.py", &rid);
 
         let chosen = adapter.resolve_relation_conflicts(&relation, vec![&s_other, &s_target]);
         assert_eq!(chosen.location, "src/foo/bar.py");
@@ -521,7 +521,7 @@ mod tests {
 
         let s1 = make_symbol("dumps", "src/aaa/foo.py", &rid);
         let s2 = make_symbol("dumps", "src/bbb/foo.py", &rid);
-        let relation = make_relation("unknown_module::dumps", "src/main.py", &rid);
+        let relation = make_relation("unknown_module/dumps", "src/main.py", &rid);
 
         let chosen = adapter.resolve_relation_conflicts(&relation, vec![&s1, &s2]);
         assert_eq!(chosen.location, s1.location);
@@ -534,7 +534,7 @@ mod tests {
 
         let s_qux = make_symbol("Bar", "src/qux/__init__.py", &rid);
         let s_foo = make_symbol("Bar", "src/foo/__init__.py", &rid);
-        let relation = make_relation("foo::Bar", "src/main.py", &rid);
+        let relation = make_relation("foo/Bar", "src/main.py", &rid);
 
         let chosen = adapter.resolve_relation_conflicts(&relation, vec![&s_qux, &s_foo]);
         assert_eq!(chosen.location, "src/foo/__init__.py");

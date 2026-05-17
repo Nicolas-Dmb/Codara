@@ -6,9 +6,11 @@ import FlowDiagram from "../components/flowDiagram";
 export default function Home() {
   const [selectedAnalysis, setSelectedAnalysis] = useState<RunResponse | null>(null);
   return (
-    <div className="min-h-screen">
+    <div className="flex h-screen">
         <LeftColumn setSelectedAnalysis={setSelectedAnalysis} />
-        <FlowDiagram selectedAnalysis={selectedAnalysis} />
+        <div className="flex-1 h-full">
+            <FlowDiagram selectedAnalysis={selectedAnalysis} />
+        </div>
     </div>
   );
 }
