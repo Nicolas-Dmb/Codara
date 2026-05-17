@@ -1,4 +1,12 @@
 
+
+export interface ModuleResponse {
+    id: string;
+    run_id: string;
+    name: string;
+    relative_path: string;
+}
+
 export interface SymbolResponse {
     id: string;
     run_id: string;
@@ -25,7 +33,7 @@ export interface RelationResponse {
 }
 
 
-export interface GraphResponse {
-    symbols: SymbolResponse[];
+export interface ModuleGraphResponse {
+    modules: ModuleResponse[];
     relations: RelationResponse[];
 }

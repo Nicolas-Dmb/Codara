@@ -3,5 +3,6 @@ from .run_repository import RunRepository, get_run_repository
 from .codebase_repository import CodebaseRepository, get_codebase_repository
 from .symbol_repository import SymbolRepository, get_symbol_repository
 from .relation_repository import RelationRepository, get_relation_repository
+from .module_repository import ModuleRepository, get_module_repository
 
-__all__ = ["ProjectRepository", "get_project_repository", "RunRepository", "get_run_repository", "CodebaseRepository", "get_codebase_repository", "SymbolRepository", "get_symbol_repository", "RelationRepository", "get_relation_repository"]
+__all__ = ["ProjectRepository", "get_project_repository", "RunRepository", "get_run_repository", "CodebaseRepository", "get_codebase_repository", "SymbolRepository", "get_symbol_repository", "RelationRepository", "get_relation_repository", "ModuleRepository", "get_module_repository"]

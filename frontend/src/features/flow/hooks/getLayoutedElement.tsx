@@ -9,7 +9,7 @@ export default function getLayoutedElements(nodes: Node[], edges: Edge[]) {
 
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({
-    rankdir: "LR", // Left to Right
+    rankdir: "LR", 
     nodesep: 80,
     ranksep: 120,
   });

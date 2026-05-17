@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
-from .schemas import SymbolGraph
-
-from .schemas import AnalyseRequest, AnalyseResponse, RunResponse, SymbolResponse, RelationResponse, ProjectsResponse, ProjectResponse
+from .schemas import AnalyseRequest, AnalyseResponse, RunResponse, RelationResponse, ProjectsResponse, ProjectResponse, ModuleGraph, ModuleResponse
 from .services import AnalyseService, get_analyse_service, GraphService, get_graph_service, ProjectService, get_project_service
 from .models import RunId
 
@@ -49,19 +47,19 @@ async def get_analyse_status(
 
 @router.get(
     "/graph/{run_id}",
-    response_model=SymbolGraph,
+    response_model=ModuleGraph,
     status_code=status.HTTP_200_OK,
 )
-async def get_symbols(
+async def module_graph(
     run_id: str,
     service: GraphService = Depends(get_graph_service),
-) -> SymbolGraph:
+) -> ModuleGraph:
     """
-        Endpoint to get the symbols and relations of a run.
+        Endpoint to get the modules and relations of a run.
     """
-    symbols, relations = await service.build_module_graph(RunId.from_str(run_id))
-    return SymbolGraph(
-        symbols=[SymbolResponse.model_validate(symbol) for symbol in symbols], 
+    modules, relations = await service.build_module_graph(RunId.from_str(run_id))
+    return ModuleGraph(
+        modules=[ModuleResponse.model_validate(module) for module in modules],
         relations=[RelationResponse.model_validate(relation) for relation in relations],
     )
     

@@ -20,18 +20,12 @@ export default function FlowDiagram({ selectedAnalysis }: FlowDiagramProps) {
             return parts.slice(0, parts.length - 3).join("::");
         };
 
-        const moduleLabel = (moduleId: string): string => {
-            const idx = moduleId.indexOf("::");
-            return idx === -1 ? moduleId : moduleId.slice(idx + 2);
-        };
-
         const moduleIds = new Set<string>();
-        graphResponse.symbols.forEach((s) => moduleIds.add(s.module_id));
-        graphResponse.relations.forEach((r) => moduleIds.add(r.module_id));
-
-        const rawNodes: Node[] = Array.from(moduleIds).map((mid) => ({
-            id: mid,
-            data: { label: moduleLabel(mid) },
+        graphResponse.modules.forEach((m) => moduleIds.add(m.id));
+        
+        const rawNodes: Node[] = graphResponse.modules.map((module) => ({
+            id: module.id,
+            data: { label: module.name },
             position: { x: 0, y: 0 },
         }));
 

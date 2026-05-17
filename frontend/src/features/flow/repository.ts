@@ -1,10 +1,10 @@
 import { api } from "../../lib/api";
-import type {GraphResponse} from "./types.ts";
+import type {ModuleGraphResponse} from "./types.ts";
 
 export const projectsRepository = {
 
-    getGraph: async (run_id: string): Promise<GraphResponse> => {
-        const { data } = await api.get<GraphResponse>(`/graph/${run_id}`);
+    getGraph: async (run_id: string): Promise<ModuleGraphResponse> => {
+        const { data } = await api.get<ModuleGraphResponse>(`/graph/${run_id}`);
         return data;
     }
 
