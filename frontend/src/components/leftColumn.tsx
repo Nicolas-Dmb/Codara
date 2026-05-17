@@ -5,7 +5,11 @@ import type { RunResponse } from "../features/analyse/types";
 import {useProjects} from "../features/project";
 import type {Project} from "../features/project";
 
-export default function LeftColumn() {
+interface LeftColumnProps {
+    setSelectedAnalysis: (analysis: RunResponse | null) => void;
+}
+
+export default function LeftColumn({ setSelectedAnalysis }: LeftColumnProps) {
     const queryProjects = useProjects();
     const analyseModal = useAnalyseModal();
     const { isOpen, toggleColumn, selectedProject, setSelectedProject } = useColumn();
@@ -20,7 +24,7 @@ export default function LeftColumn() {
         >
             {topColumn({ isOpen, toggleColumn })}
             {ProjectsPart({ isOpen, projects: queryProjects.data, setSelectedProject })}
-            {AnalysisPart({ isOpen, onAddClick: analyseModal.open, runs })}
+            {AnalysisPart({ isOpen, onAddClick: analyseModal.open, runs, setSelectedAnalysis })}
 
             <AnalyseModal
                 isOpen={analyseModal.isOpen}
@@ -112,6 +116,7 @@ interface AnalysisPartProps {
     isOpen: boolean;
     onAddClick: () => void;
     runs: RunResponse[];
+    setSelectedAnalysis: (analysis: RunResponse | null) => void;
 }
 
 const statusColor: Record<string, string> = {
@@ -122,7 +127,7 @@ const statusColor: Record<string, string> = {
     partial_success: "text-orange-500",
 };
 
-function AnalysisPart({ isOpen, onAddClick, runs }: AnalysisPartProps) {
+function AnalysisPart({ isOpen, onAddClick, runs, setSelectedAnalysis }: AnalysisPartProps) {
     return (
         <div
             className={
@@ -150,7 +155,7 @@ function AnalysisPart({ isOpen, onAddClick, runs }: AnalysisPartProps) {
             </div>
             <div className="flex flex-col gap-2">
                 {runs.map((run) => (
-                    <div className="flex justify-between p-2 cursor-pointer hover:bg-gray-100" key={run.id}>
+                    <div className="flex justify-between p-2 cursor-pointer hover:bg-gray-100" key={run.id} onClick={() => setSelectedAnalysis(run)}>
                         <p className="text-xs">{run.branch}</p>
                         <p className={`text-xs font-medium ${statusColor[run.status] ?? "text-gray-500"}`}>
                             {run.status}
