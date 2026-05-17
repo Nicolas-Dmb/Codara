@@ -41,7 +41,7 @@ impl fmt::Display for SymbolKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Symbol {
     pub id: SymbolId,
     pub run_id: RunId,
