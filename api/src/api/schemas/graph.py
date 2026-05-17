@@ -3,6 +3,15 @@
 from ..models import SymbolKind, RelationKind
 from pydantic import BaseModel, ConfigDict
 
+
+class ModuleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    run_id: str
+    relative_path: str
+    name: str
+
 class SymbolResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,4 +44,8 @@ class RelationResponse(BaseModel):
 
 class SymbolGraph(BaseModel):
     symbols: list[SymbolResponse]
+    relations: list[RelationResponse]
+
+class ModuleGraph(BaseModel):
+    modules: list[ModuleResponse]
     relations: list[RelationResponse]

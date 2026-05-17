@@ -88,7 +88,7 @@ fn extract_name_from_import(node: tree_sitter::Node, source_code: &str) -> Resul
     Ok(name_nodes.iter().map(|n| if statement_name.is_empty() {
         n.to_string()
     } else {
-        format!("{}::{}", statement_name, n)
+        format!("{}/{}", statement_name, n)
     }).collect())
 }
 

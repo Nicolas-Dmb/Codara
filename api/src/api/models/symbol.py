@@ -14,13 +14,13 @@ class SymbolKind(Enum):
         return self.value
 
 class SymbolId(str):
-    
+
     def __new__(cls, module_id: ModuleId, kind: SymbolKind, name: str, start_line: int):
-        return super().__new__(cls, f"{module_id}:{kind}:{name}:{start_line}")
-    
+        return super().__new__(cls, f"{module_id}::{kind}::{name}::{start_line}")
+
     @classmethod
     def from_db_row(cls, symbol_id: str) -> "SymbolId":
-        module_id, kind, name, start_line = symbol_id.rsplit(":", 3)
+        module_id, kind, name, start_line = symbol_id.rsplit("::", 3)
         return cls(ModuleId.from_db_row(module_id), SymbolKind(kind), name, int(start_line))
 
 @dataclass

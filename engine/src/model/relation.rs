@@ -87,6 +87,11 @@ impl Relation {
             line,
         }
     }
+
+    pub fn add_target(mut self, target_symbol_id: SymbolId) -> Self {
+        self.target_symbol_id = Some(target_symbol_id);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

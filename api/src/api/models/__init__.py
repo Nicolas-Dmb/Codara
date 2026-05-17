@@ -3,6 +3,7 @@ from .project_id import ProjectId
 from .run import Run, RunId, Status
 from .symbol import Symbol, SymbolId, SymbolKind
 from .relation import Relation, RelationId, RelationKind
+from .module import Module, ModuleId
 __all__ = [
     "Project",
     "ProjectId",
@@ -14,5 +15,7 @@ __all__ = [
     "SymbolKind",
     "Relation",
     "RelationId",
-    "RelationKind"
+    "RelationKind",
+    "Module",
+    "ModuleId"
 ]

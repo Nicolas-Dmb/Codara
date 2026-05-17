@@ -17,11 +17,11 @@ class RelationKind(Enum):
 class RelationId(str):
 
     def __new__(cls, module_id: ModuleId, kind: RelationKind, imported_name: str, source_path: str, line: int):
-        return super().__new__(cls, f"{module_id}:{kind}:{imported_name}:{source_path}:{line}")
-    
+        return super().__new__(cls, f"{module_id}::{kind}::{source_path}::{imported_name}::{line}")
+
     @classmethod
     def from_db_row(cls, symbol_id: str) -> "RelationId":
-        module_id, kind, imported_name, source_path, line = symbol_id.rsplit(":", 4)
+        module_id, kind, source_path, imported_name, line = symbol_id.rsplit("::", 4)
         return cls(ModuleId.from_db_row(module_id), RelationKind(kind), imported_name, source_path, int(line))
 
 
