@@ -56,7 +56,7 @@ export default function useAnalyseModal() {
                 const run = project.runs.find(
                     (r) =>
                         r.branch === analyse.branch &&
-                        (r.status === "pending" || r.status === "running")
+                        (r.status === "pending" || r.status === "processing")
                 );
                 if (run) return true;
             }

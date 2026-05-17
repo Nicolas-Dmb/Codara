@@ -3,7 +3,7 @@ import { analyseRepository } from "../repository";
 import type { Project } from "../../project";
 import type { AnalyseResponse, AnalyseStatus, RunResponse } from "../types";
 
-const ACTIVE: AnalyseStatus[] = ["pending", "running"];
+const ACTIVE: AnalyseStatus[] = ["pending", "processing"];
 const isActive = (s: AnalyseStatus) => ACTIVE.includes(s);
 
 export default function useAnalyseStatus(project: Project | null) {

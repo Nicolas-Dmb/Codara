@@ -6,9 +6,9 @@ import {useProjects} from "../features/project";
 import type {Project} from "../features/project";
 
 export default function LeftColumn() {
-    const { isOpen, toggleColumn, selectedProject, setSelectedProject } = useColumn();
     const queryProjects = useProjects();
     const analyseModal = useAnalyseModal();
+    const { isOpen, toggleColumn, selectedProject, setSelectedProject } = useColumn();
     const { runs } = useAnalyseStatus(selectedProject);
     
     return (
@@ -100,9 +100,8 @@ function ProjectsPart({ isOpen, projects, setSelectedProject }: SubColumnProps) 
                 <button className="text-sm font-bold text-black hover:text-primary">+</button>
             </div>
             {projects && projects.map((project) => (
-                <div onClick={() => setSelectedProject(project)} className="flex justify-between p-2" key={project.id}>
-                    <p className="font-small">{project.name}</p>
-                    <p className="text-gray-500 font-medium">{project.repo_url}</p>
+                <div onClick={() => setSelectedProject(project)} className="flex justify-between align-baseline p-2 cursor-pointer hover:bg-gray-100" key={project.id}>
+                    <p className="text-sm">{project.name}</p>
                 </div>
             ))}
         </div>
@@ -117,7 +116,7 @@ interface AnalysisPartProps {
 
 const statusColor: Record<string, string> = {
     pending: "text-yellow-500",
-    running: "text-blue-500",
+    processing: "text-blue-500",
     done: "text-green-500",
     failed: "text-red-500",
     partial_success: "text-orange-500",
@@ -151,9 +150,9 @@ function AnalysisPart({ isOpen, onAddClick, runs }: AnalysisPartProps) {
             </div>
             <div className="flex flex-col gap-2">
                 {runs.map((run) => (
-                    <div className="flex justify-between p-2" key={run.id}>
-                        <p className="font-small">{run.branch}</p>
-                        <p className={`font-medium ${statusColor[run.status] ?? "text-gray-500"}`}>
+                    <div className="flex justify-between p-2 cursor-pointer hover:bg-gray-100" key={run.id}>
+                        <p className="text-xs">{run.branch}</p>
+                        <p className={`text-xs font-medium ${statusColor[run.status] ?? "text-gray-500"}`}>
                             {run.status}
                         </p>
                     </div>

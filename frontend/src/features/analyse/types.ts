@@ -7,7 +7,7 @@ export interface AnalyseRequest {
     branch: string;
 }
 
-export type AnalyseStatus = "pending" | "running" | "done" | "failed" | "partial_success";
+export type AnalyseStatus = "pending" | "processing" | "done" | "failed" | "partial_success";
 
 export interface RunResponse {
     id: string;
